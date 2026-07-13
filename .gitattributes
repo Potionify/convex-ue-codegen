@@ -5,3 +5,7 @@
 # are authored with LF. Pin them so Git never rewrites their line endings.
 tests/expected/** -text
 tests/fixtures/** -text
+
+# WASM artifacts are binary; the generated JS glue is regenerated, not diffed.
+*.wasm -text
+web/src/generated/codegen.mjs -diff

@@ -32,3 +32,7 @@ Testing/
 # Secrets / local environment
 *.env.local
 .env
+
+# Web app
+web/node_modules/
+web/dist/
