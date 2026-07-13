@@ -1,0 +1,156 @@
+{
+  "status": "success",
+  "value": [
+    {
+      "identifier": "sink.js:kitchenSink",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "s": { "fieldType": { "type": "string" }, "optional": false },
+          "n": { "fieldType": { "type": "number" }, "optional": false },
+          "f": { "fieldType": { "type": "float64" }, "optional": false },
+          "b": { "fieldType": { "type": "boolean" }, "optional": false },
+          "i": { "fieldType": { "type": "int64" }, "optional": false },
+          "big": { "fieldType": { "type": "bigint" }, "optional": false },
+          "nul": { "fieldType": { "type": "null" }, "optional": false },
+          "anyField": { "fieldType": { "type": "any" }, "optional": false },
+          "by": { "fieldType": { "type": "bytes" }, "optional": false },
+          "docId": { "fieldType": { "type": "id", "tableName": "documents" }, "optional": false },
+          "litStr": { "fieldType": { "type": "literal", "value": "hello" }, "optional": false },
+          "litNum": { "fieldType": { "type": "literal", "value": 42 }, "optional": false },
+          "litBool": { "fieldType": { "type": "literal", "value": true }, "optional": false },
+          "tags": { "fieldType": { "type": "array", "value": { "type": "string" } }, "optional": false },
+          "nums": { "fieldType": { "type": "array", "value": { "type": "number" } }, "optional": false },
+          "flags": { "fieldType": { "type": "array", "value": { "type": "boolean" } }, "optional": false },
+          "counts": { "fieldType": { "type": "array", "value": { "type": "int64" } }, "optional": false },
+          "items": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "id": { "fieldType": { "type": "string" }, "optional": false },
+                  "qty": { "fieldType": { "type": "int64" }, "optional": false }
+                }
+              }
+            },
+            "optional": false
+          },
+          "rec": {
+            "fieldType": {
+              "type": "record",
+              "keys": { "type": "string" },
+              "values": { "type": "number" }
+            },
+            "optional": false
+          },
+          "uni": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "object", "value": { "k": { "fieldType": { "type": "boolean" }, "optional": false } } }
+              ]
+            },
+            "optional": false
+          },
+          "nested": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "inner": { "fieldType": { "type": "string" }, "optional": false },
+                "deep": {
+                  "fieldType": { "type": "object", "value": { "x": { "fieldType": { "type": "number" }, "optional": false } } },
+                  "optional": true
+                }
+              }
+            },
+            "optional": true
+          }
+        }
+      },
+      "returns": { "type": "object", "value": { "ok": { "fieldType": { "type": "boolean" }, "optional": false } } }
+    },
+    {
+      "identifier": "sink.js:noArgs",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": { "type": "object", "value": {} },
+      "returns": null
+    },
+    {
+      "identifier": "sink.js:anyArgs",
+      "functionType": "Mutation",
+      "visibility": { "kind": "public" },
+      "args": { "type": "any" },
+      "returns": { "type": "any" }
+    },
+    {
+      "identifier": "sink.js:runAction",
+      "functionType": "Action",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "uploadId": { "fieldType": { "type": "id", "tableName": "uploads" }, "optional": false },
+          "count": { "fieldType": { "type": "number" }, "optional": true }
+        }
+      },
+      "returns": null
+    },
+    {
+      "identifier": "sink.js:secret",
+      "functionType": "Query",
+      "visibility": { "kind": "internal" },
+      "args": { "type": "object", "value": {} },
+      "returns": null
+    },
+    {
+      "identifier": "admin/tools.js:reset",
+      "functionType": "Mutation",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "force": { "fieldType": { "type": "boolean" }, "optional": true }
+        }
+      },
+      "returns": null
+    },
+    {
+      "identifier": "foo_bar.js:x",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": { "a": { "fieldType": { "type": "string" }, "optional": false } }
+      },
+      "returns": null
+    },
+    {
+      "identifier": "fooBar.js:x",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": { "a": { "fieldType": { "type": "string" }, "optional": false } }
+      },
+      "returns": null
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "GET",
+      "path": "/webhook"
+    },
+    {
+      "identifier": "_system/frontend/foo.js:bar",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": null,
+      "returns": null
+    }
+  ]
+}
