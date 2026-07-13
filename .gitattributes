@@ -1,0 +1,7 @@
+# Normalize line endings by default.
+* text=auto
+
+# Golden fixtures and expected output are compared byte-exact by the tests and
+# are authored with LF. Pin them so Git never rewrites their line endings.
+tests/expected/** -text
+tests/fixtures/** -text
