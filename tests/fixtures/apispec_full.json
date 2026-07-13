@@ -141,6 +141,53 @@
       "returns": null
     },
     {
+      "identifier": "messages.js:listPaginated",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "channel": { "fieldType": { "type": "string" }, "optional": false },
+          "paginationOpts": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "numItems": { "fieldType": { "type": "number" }, "optional": false },
+                "cursor": { "fieldType": { "type": "union", "value": [ { "type": "string" }, { "type": "null" } ] }, "optional": false },
+                "endCursor": { "fieldType": { "type": "union", "value": [ { "type": "string" }, { "type": "null" } ] }, "optional": true },
+                "id": { "fieldType": { "type": "number" }, "optional": true },
+                "maximumRowsRead": { "fieldType": { "type": "number" }, "optional": true },
+                "maximumBytesRead": { "fieldType": { "type": "number" }, "optional": true }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "returns": { "type": "any" }
+    },
+    {
+      "identifier": "messages.js:listBad",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "channel": { "fieldType": { "type": "string" }, "optional": false },
+          "paginationOpts": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "numItems": { "fieldType": { "type": "number" }, "optional": false }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "returns": { "type": "any" }
+    },
+    {
       "functionType": "HttpAction",
       "method": "GET",
       "path": "/webhook"

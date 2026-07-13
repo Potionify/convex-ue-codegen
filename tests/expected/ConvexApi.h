@@ -9,6 +9,7 @@
 #include "CoreMinimal.h"
 #include "ConvexValue.h"
 #include "ConvexDelegates.h"
+#include "ConvexPaginatedSubscription.h"
 
 class UConvexClient;
 class UConvexSubscription;
@@ -45,6 +46,26 @@ namespace FooBar
 	UConvexSubscription* WatchX_2(UConvexClient& Client, const FString& A, FConvexResultNative OnUpdate);
 
 }  // namespace FooBar
+
+namespace Messages
+{
+
+	/// messages.js:listBad (Query)
+	/// args:    object{ channel: string, paginationOpts: object{ numItems: number } }
+	/// returns: any
+	void ListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult);
+	UConvexSubscription* WatchListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate);
+
+	/// messages.js:listPaginated (Query)
+	/// args:    object{ channel: string, paginationOpts: object{ cursor: union<string | null>, endCursor?: union<string | null>, id?: number, maximumBytesRead?: number, maximumRowsRead?: number, numItems: number } }
+	/// returns: any
+	void ListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult);
+	UConvexSubscription* WatchListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate);
+	/// Subscribes messages:listPaginated as a growing live list (the usePaginatedQuery
+	/// pattern); paginationOpts is injected by the client.
+	UConvexPaginatedSubscription* WatchListPaginatedPaginated(UConvexClient& Client, const FString& Channel, int32 InitialNumItems, FConvexPaginatedUpdateNativeFn OnUpdate);
+
+}  // namespace Messages
 
 namespace Sink
 {

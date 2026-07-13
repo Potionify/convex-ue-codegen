@@ -62,6 +62,41 @@ TEST(Emit, MutationHasNoWatch) {
     EXPECT_FALSE(contains(h, "WatchReset"));
 }
 
+TEST(Emit, PaginatedQueryGetsPaginatedWatchVariant) {
+    auto files = emit_fixture({});
+    const std::string& h = files.at("ConvexApi.h");
+    const std::string& c = files.at("ConvexApi.cpp");
+    // messages:listPaginated matches the paginationOpts shape. It keeps its
+    // plain X + WatchX wrappers (paginationOpts stays an ordinary arg there)
+    // and gains a WatchXPaginated wrapper that drops paginationOpts and takes
+    // InitialNumItems + FConvexPaginatedUpdateNativeFn.
+    EXPECT_TRUE(contains(h, "void ListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult);"));
+    EXPECT_TRUE(contains(h, "UConvexSubscription* WatchListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate);"));
+    EXPECT_TRUE(contains(h, "UConvexPaginatedSubscription* WatchListPaginatedPaginated(UConvexClient& Client, const FString& Channel, int32 InitialNumItems, FConvexPaginatedUpdateNativeFn OnUpdate);"));
+    // The paginated impl injects paginationOpts via the client entry point.
+    EXPECT_TRUE(contains(c, "return Client.SubscribePaginatedNative(TEXT(\"messages:listPaginated\"), Args, InitialNumItems, MoveTemp(OnUpdate));"));
+    // Its Args map must NOT carry paginationOpts (the client injects it).
+    const std::size_t pag = c.find("WatchListPaginatedPaginated(UConvexClient& Client");
+    ASSERT_NE(pag, std::string::npos);
+    const std::size_t body_end = c.find("\n}", pag);
+    EXPECT_EQ(c.substr(pag, body_end - pag).find("paginationOpts"), std::string::npos);
+}
+
+TEST(Emit, PaginatedIncludesPluginHeader) {
+    auto files = emit_fixture({});
+    // The header pulls in ConvexPaginatedSubscription.h for the alias/type.
+    EXPECT_TRUE(contains(files.at("ConvexApi.h"), "#include \"ConvexPaginatedSubscription.h\""));
+}
+
+TEST(Emit, NonMatchingPaginationOptsGetsNoPaginatedVariant) {
+    auto files = emit_fixture({});
+    const std::string& h = files.at("ConvexApi.h");
+    // messages:listBad has a paginationOpts arg missing `cursor`: it is a plain
+    // query (X + WatchX) and must NOT get a paginated wrapper.
+    EXPECT_TRUE(contains(h, "UConvexSubscription* WatchListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate);"));
+    EXPECT_FALSE(contains(h, "WatchListBadPaginated"));
+}
+
 TEST(Emit, PassthroughForAnyArgs) {
     auto files = emit_fixture({});
     const std::string& c = files.at("ConvexApi.cpp");

@@ -67,6 +67,58 @@ UConvexSubscription* UConvexApiFooBarLibrary::WatchX_2(UConvexClient* Client, co
 	return Client->Subscribe(TEXT("foo_bar:x"), Args, OnUpdate);
 }
 
+void UConvexApiMessagesLibrary::ListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex ListBad: Client is null"));
+		return;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	Client->Query(TEXT("messages:listBad"), Args, OnResult);
+}
+
+UConvexSubscription* UConvexApiMessagesLibrary::WatchListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnUpdate)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex WatchListBad: Client is null"));
+		return nullptr;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	return Client->Subscribe(TEXT("messages:listBad"), Args, OnUpdate);
+}
+
+void UConvexApiMessagesLibrary::ListPaginated(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex ListPaginated: Client is null"));
+		return;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	Client->Query(TEXT("messages:listPaginated"), Args, OnResult);
+}
+
+UConvexSubscription* UConvexApiMessagesLibrary::WatchListPaginated(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnUpdate)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex WatchListPaginated: Client is null"));
+		return nullptr;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	return Client->Subscribe(TEXT("messages:listPaginated"), Args, OnUpdate);
+}
+
 void UConvexApiSinkLibrary::AnyArgs(UConvexClient* Client, const TMap<FString, FConvexValue>& Args, FConvexResultDelegate OnResult)
 {
 	if (Client == nullptr)

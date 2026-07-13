@@ -44,6 +44,45 @@ UConvexSubscription* ConvexApi::FooBar::WatchX_2(UConvexClient& Client, const FS
 	return Client.SubscribeNative(TEXT("foo_bar:x"), Args, MoveTemp(OnUpdate));
 }
 
+void ConvexApi::Messages::ListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	Client.QueryNative(TEXT("messages:listBad"), Args, MoveTemp(OnResult));
+}
+
+UConvexSubscription* ConvexApi::Messages::WatchListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	return Client.SubscribeNative(TEXT("messages:listBad"), Args, MoveTemp(OnUpdate));
+}
+
+void ConvexApi::Messages::ListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	Client.QueryNative(TEXT("messages:listPaginated"), Args, MoveTemp(OnResult));
+}
+
+UConvexSubscription* ConvexApi::Messages::WatchListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Args.Add(TEXT("paginationOpts"), PaginationOpts);
+	return Client.SubscribeNative(TEXT("messages:listPaginated"), Args, MoveTemp(OnUpdate));
+}
+
+UConvexPaginatedSubscription* ConvexApi::Messages::WatchListPaginatedPaginated(UConvexClient& Client, const FString& Channel, int32 InitialNumItems, FConvexPaginatedUpdateNativeFn OnUpdate)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	return Client.SubscribePaginatedNative(TEXT("messages:listPaginated"), Args, InitialNumItems, MoveTemp(OnUpdate));
+}
+
 void ConvexApi::Sink::AnyArgs(UConvexClient& Client, const TMap<FString, FConvexValue>& Args, FConvexResultNative OnResult)
 {
 	Client.MutationNative(TEXT("sink:anyArgs"), Args, MoveTemp(OnResult));

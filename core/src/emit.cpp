@@ -251,7 +251,22 @@ struct resolved_fn {
     arg_plan plan;
     std::string call_name;   ///< one-shot wrapper name
     std::string watch_name;  ///< subscription wrapper name (queries only)
+    bool paginated = false;  ///< query matches the paginationOpts shape
+    std::string watch_paginated_name;  ///< live paginated-list wrapper name
+    arg_plan paginated_plan;  ///< args with paginationOpts removed (client injects it)
 };
+
+/// Copy `plan` dropping the named field. Used for the paginated wrapper, whose
+/// paginationOpts argument is injected by the client rather than the caller.
+arg_plan plan_without_field(const arg_plan& plan, const std::string& field_name) {
+    arg_plan out;
+    out.passthrough = plan.passthrough;
+    for (const planned_arg& a : plan.args) {
+        if (a.field_name == field_name) continue;
+        out.args.push_back(a);
+    }
+    return out;
+}
 
 std::vector<resolved_fn> resolve_names(const group& g) {
     std::vector<resolved_fn> out;
@@ -263,6 +278,12 @@ std::vector<resolved_fn> resolve_names(const group& g) {
         r.call_name = pool.take(pascal_case(spec->function_name));
         if (spec->type == function_type::query) {
             r.watch_name = pool.take("Watch" + pascal_case(spec->function_name));
+            if (is_paginated_query(*spec)) {
+                r.paginated = true;
+                r.watch_paginated_name =
+                    pool.take("Watch" + pascal_case(spec->function_name) + "Paginated");
+                r.paginated_plan = plan_without_field(r.plan, "paginationOpts");
+            }
         }
         out.push_back(std::move(r));
     }
@@ -346,6 +367,12 @@ void emit_native(const emit_options& opt, const std::vector<function_spec>& spec
     const std::string& prefix = opt.prefix;
     const std::vector<group> groups = group_by_namespace(specs);
 
+    // Paginated query wrappers reference UConvexPaginatedSubscription and the
+    // FConvexPaginatedUpdateNativeFn alias, both declared in the plugin header
+    // ConvexPaginatedSubscription.h — pull it in only when we actually emit one.
+    const bool any_paginated =
+        std::any_of(specs.begin(), specs.end(), is_paginated_query);
+
     // ---- Header ----
     std::string h = file_header(opt);
     h += "\n#pragma once\n\n";
@@ -353,7 +380,11 @@ void emit_native(const emit_options& opt, const std::vector<function_spec>& spec
     h += "// Compiles inside a UE module (depends on the ConvexClient module).\n\n";
     h += "#include \"CoreMinimal.h\"\n";
     h += "#include \"ConvexValue.h\"\n";
-    h += "#include \"ConvexDelegates.h\"\n\n";
+    h += "#include \"ConvexDelegates.h\"\n";
+    if (any_paginated) {
+        h += "#include \"ConvexPaginatedSubscription.h\"\n";
+    }
+    h += "\n";
     h += "class UConvexClient;\n";
     h += "class UConvexSubscription;\n\n";
     h += "namespace " + prefix + "\n{\n\n";
@@ -397,6 +428,17 @@ void emit_native(const emit_options& opt, const std::vector<function_spec>& spec
                 h += "\tUConvexSubscription* " + r.watch_name + "(" +
                      join_params("UConvexClient& Client", args, "FConvexResultNative OnUpdate") +
                      ");\n";
+                if (r.paginated) {
+                    const std::string pag_args = native_arg_params(r.paginated_plan);
+                    h += "\t/// Subscribes " + spec.canonical_identifier +
+                         " as a growing live list (the usePaginatedQuery\n";
+                    h += "\t/// pattern); paginationOpts is injected by the client.\n";
+                    h += "\tUConvexPaginatedSubscription* " + r.watch_paginated_name + "(" +
+                         join_params("UConvexClient& Client", pag_args,
+                                     "int32 InitialNumItems, FConvexPaginatedUpdateNativeFn "
+                                     "OnUpdate") +
+                         ");\n";
+                }
             }
             h += "\n";
 
@@ -428,6 +470,20 @@ void emit_native(const emit_options& opt, const std::vector<function_spec>& spec
                          "\"), Args, MoveTemp(OnUpdate));\n";
                 }
                 c += "}\n\n";
+
+                if (r.paginated) {
+                    const std::string pag_args = native_arg_params(r.paginated_plan);
+                    c += "UConvexPaginatedSubscription* " + qual + r.watch_paginated_name + "(" +
+                         join_params("UConvexClient& Client", pag_args,
+                                     "int32 InitialNumItems, FConvexPaginatedUpdateNativeFn "
+                                     "OnUpdate") +
+                         ")\n{\n";
+                    c += emit_args_build(r.paginated_plan, /*include_optional=*/true);
+                    c += "\treturn Client.SubscribePaginatedNative(TEXT(\"" +
+                         spec.canonical_identifier +
+                         "\"), Args, InitialNumItems, MoveTemp(OnUpdate));\n";
+                    c += "}\n\n";
+                }
             }
         }
 

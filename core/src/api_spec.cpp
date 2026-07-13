@@ -97,4 +97,25 @@ std::vector<function_spec> parse_api_spec(std::string_view json_text, bool inclu
     return specs;
 }
 
+bool is_paginated_query(const function_spec& spec) {
+    if (spec.type != function_type::query) return false;
+    if (!spec.args || spec.args->kind != validator_kind::object) return false;
+    for (const validator_field& field : spec.args->fields) {
+        if (field.name != "paginationOpts") continue;
+        // The paginationOpts validator must itself be an object carrying at
+        // least numItems and cursor (the convex-js paginationOptsValidator);
+        // the optional endCursor/id/maximumRowsRead/maximumBytesRead fields are
+        // not required.
+        if (!field.type || field.type->kind != validator_kind::object) return false;
+        bool has_num_items = false;
+        bool has_cursor = false;
+        for (const validator_field& inner : field.type->fields) {
+            if (inner.name == "numItems") has_num_items = true;
+            else if (inner.name == "cursor") has_cursor = true;
+        }
+        return has_num_items && has_cursor;
+    }
+    return false;
+}
+
 }  // namespace convex_codegen

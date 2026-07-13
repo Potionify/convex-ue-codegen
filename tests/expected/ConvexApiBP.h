@@ -48,6 +48,26 @@ public:
 };
 
 UCLASS()
+class UConvexApiMessagesLibrary : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex messages:listBad", ToolTip = "messages:listBad (Query)\nargs: object{ channel: string, paginationOpts: object{ numItems: number } }"))
+	static void ListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex Watch messages:listBad", ToolTip = "messages:listBad (Query) live subscription\nargs: object{ channel: string, paginationOpts: object{ numItems: number } }"))
+	static UConvexSubscription* WatchListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnUpdate);
+
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex messages:listPaginated", ToolTip = "messages:listPaginated (Query)\nargs: object{ channel: string, paginationOpts: object{ cursor: union<string | null>, endCursor?: union<string | null>, id?: number, maximumBytesRead?: number, maximumRowsRead?: number, numItems: number } }"))
+	static void ListPaginated(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex Watch messages:listPaginated", ToolTip = "messages:listPaginated (Query) live subscription\nargs: object{ channel: string, paginationOpts: object{ cursor: union<string | null>, endCursor?: union<string | null>, id?: number, maximumBytesRead?: number, maximumRowsRead?: number, numItems: number } }"))
+	static UConvexSubscription* WatchListPaginated(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnUpdate);
+
+};
+
+UCLASS()
 class UConvexApiSinkLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()

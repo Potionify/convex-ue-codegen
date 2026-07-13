@@ -39,4 +39,11 @@ struct function_spec {
 /// The result is sorted by canonical identifier for deterministic emission.
 std::vector<function_spec> parse_api_spec(std::string_view json_text, bool include_internal);
 
+/// True when `spec` is a paginated Convex query: a Query whose args validator
+/// is an object with a `paginationOpts` field whose own validator is an object
+/// containing at least `numItems` and `cursor` (the convex-js
+/// paginationOptsValidator shape). The optional endCursor/id/maximumRowsRead/
+/// maximumBytesRead fields are not required.
+bool is_paginated_query(const function_spec& spec);
+
 }  // namespace convex_codegen

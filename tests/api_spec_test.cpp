@@ -73,3 +73,80 @@ TEST(ApiSpec, SortedByCanonicalIdentifier) {
     EXPECT_EQ(specs[0].canonical_identifier, "a:z");
     EXPECT_EQ(specs[1].canonical_identifier, "z:a");
 }
+
+// ---- paginated-query detection -------------------------------------------
+
+namespace {
+
+// A Query whose paginationOpts holds `fields` (a JSON object body). Wrapped in
+// a channel arg so the args object has a non-pagination field too.
+function_spec paginated_spec(const char* pagination_fields) {
+    std::string spec = std::string(R"([{
+      "identifier":"m.js:f","functionType":"Query","visibility":{"kind":"public"},
+      "args":{"type":"object","value":{
+        "channel":{"fieldType":{"type":"string"},"optional":false},
+        "paginationOpts":{"fieldType":{"type":"object","value":)") +
+                       pagination_fields + R"(},"optional":false}}},"returns":{"type":"any"}}])";
+    auto specs = parse_api_spec(spec, false);
+    return specs.at(0);
+}
+
+}  // namespace
+
+TEST(Paginated, DetectsFullPaginationOptsShape) {
+    // The convex-js paginationOptsValidator shape: numItems + cursor plus the
+    // optional endCursor/id/maximumRowsRead/maximumBytesRead.
+    EXPECT_TRUE(is_paginated_query(paginated_spec(R"({
+      "numItems":{"fieldType":{"type":"number"},"optional":false},
+      "cursor":{"fieldType":{"type":"union","value":[{"type":"string"},{"type":"null"}]},"optional":false},
+      "endCursor":{"fieldType":{"type":"union","value":[{"type":"string"},{"type":"null"}]},"optional":true},
+      "id":{"fieldType":{"type":"number"},"optional":true},
+      "maximumRowsRead":{"fieldType":{"type":"number"},"optional":true},
+      "maximumBytesRead":{"fieldType":{"type":"number"},"optional":true}})")));
+}
+
+TEST(Paginated, DetectsMinimalNumItemsAndCursorOnly) {
+    // The optional fields are not required for detection.
+    EXPECT_TRUE(is_paginated_query(paginated_spec(R"({
+      "numItems":{"fieldType":{"type":"number"},"optional":false},
+      "cursor":{"fieldType":{"type":"string"},"optional":false}})")));
+}
+
+TEST(Paginated, RejectsMissingCursor) {
+    EXPECT_FALSE(is_paginated_query(paginated_spec(R"({
+      "numItems":{"fieldType":{"type":"number"},"optional":false}})")));
+}
+
+TEST(Paginated, RejectsMissingNumItems) {
+    EXPECT_FALSE(is_paginated_query(paginated_spec(R"({
+      "cursor":{"fieldType":{"type":"string"},"optional":false}})")));
+}
+
+TEST(Paginated, RejectsPaginationOptsThatIsNotAnObject) {
+    // paginationOpts present but not an object validator -> not paginated.
+    const char* spec = R"([{
+      "identifier":"m.js:f","functionType":"Query","visibility":{"kind":"public"},
+      "args":{"type":"object","value":{
+        "paginationOpts":{"fieldType":{"type":"string"},"optional":false}}},"returns":{"type":"any"}}])";
+    EXPECT_FALSE(is_paginated_query(parse_api_spec(spec, false).at(0)));
+}
+
+TEST(Paginated, RejectsNonQueryEvenWithMatchingShape) {
+    const char* spec = R"([{
+      "identifier":"m.js:f","functionType":"Mutation","visibility":{"kind":"public"},
+      "args":{"type":"object","value":{
+        "paginationOpts":{"fieldType":{"type":"object","value":{
+          "numItems":{"fieldType":{"type":"number"},"optional":false},
+          "cursor":{"fieldType":{"type":"string"},"optional":false}}},"optional":false}}},
+      "returns":{"type":"any"}}])";
+    EXPECT_FALSE(is_paginated_query(parse_api_spec(spec, false).at(0)));
+}
+
+TEST(Paginated, RejectsQueryWithoutPaginationOpts) {
+    const char* spec = R"([{
+      "identifier":"m.js:f","functionType":"Query","visibility":{"kind":"public"},
+      "args":{"type":"object","value":{
+        "numItems":{"fieldType":{"type":"number"},"optional":false},
+        "cursor":{"fieldType":{"type":"string"},"optional":false}}},"returns":{"type":"any"}}])";
+    EXPECT_FALSE(is_paginated_query(parse_api_spec(spec, false).at(0)));
+}
