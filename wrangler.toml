@@ -1,0 +1,12 @@
+# Cloudflare Workers deployment of the static web app (assets-only worker, no
+# server code — the deploy key never leaves the visitor's browser).
+#
+# Build first, then deploy:
+#   cd web && npm install && npm run build && cd ..
+#   npx wrangler deploy
+
+name = "convex-ue-codegen"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "web/dist"

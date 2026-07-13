@@ -187,14 +187,85 @@ CODEGEN_REGENERATE=1 build/tests/Release/convex_ue_codegen_tests.exe \
 This rewrites `tests/expected/` from the current emitter (the test then reports
 `SKIPPED`). Review the diff before committing.
 
+## Web version
+
+A static, serverless web app (Vite + React + TypeScript) that produces the
+**exact same output as the CLI, byte for byte** — the same `core/` emission
+library compiled to WebAssembly. Paste a deployment URL + deploy key (or paste
+/ upload an apiSpec JSON), tweak the options, and copy the files or download a
+.zip.
+
+**Security model:** there is no server component. The deploy key is used only
+for the direct `POST {url}/api/query` request from your browser to your own
+deployment (`Authorization: Convex <key>`) and never leaves the browser. If
+that fetch is blocked by CORS, run `npx convex function-spec` locally and paste
+the output instead.
+
+### Building the WASM module
+
+The built artifacts (`web/src/generated/codegen.mjs` + `codegen.wasm`) are
+committed, so the web app builds without the Emscripten SDK. To rebuild after
+changing the core:
+
+```bat
+rem needs emcc on PATH (emsdk install latest / activate latest / emsdk_env.bat)
+wasm\build-wasm.bat
+```
+
+or on any shell:
+
+```bash
+emcc -O2 -std=c++20 -fwasm-exceptions -Icore/include -Ithird_party \
+  core/src/naming.cpp core/src/validator.cpp core/src/type_map.cpp \
+  core/src/api_spec.cpp core/src/emit.cpp wasm/wrapper.cpp \
+  -sMODULARIZE=1 -sEXPORT_ES6=1 \
+  -sEXPORTED_FUNCTIONS=_convex_ue_codegen_generate,_convex_ue_codegen_free,_malloc,_free \
+  -sEXPORTED_RUNTIME_METHODS=UTF8ToString,stringToUTF8,lengthBytesUTF8 \
+  -sALLOW_MEMORY_GROWTH=1 --no-entry -o web/src/generated/codegen.mjs
+```
+
+The C bridge is `wasm/wrapper.cpp`: `convex_ue_codegen_generate(spec_json,
+options_json)` returns a malloc'd JSON string (`{"files": {...}}` or
+`{"error": "..."}`) released via `convex_ue_codegen_free`; no exception ever
+crosses the C boundary.
+
+### Building and testing the web app
+
+```bash
+cd web
+npm install
+npm test        # golden parity: WASM output must be byte-identical to tests/expected/
+npm run build   # type-check + bundle to web/dist
+npm run dev     # local dev server
+```
+
+`npm test` runs `web/scripts/parity-test.mjs` in Node: it loads the WASM
+module, feeds it `tests/fixtures/apispec_full.json` with the same fixed stamp
+the C++ golden tests use, and byte-compares every produced file against
+`tests/expected/`. Rebuild the WASM (and, if the emitter changed, regenerate
+the C++ goldens) whenever the core changes, or this test will fail.
+
+### Deploying to Cloudflare
+
+`wrangler.toml` at the repo root serves `web/dist` as static assets
+(assets-only Worker):
+
+```bash
+cd web && npm install && npm run build && cd ..
+npx wrangler deploy
+```
+
 ## Architecture
 
 - **`core/`** — the pure emission library: apiSpec text in, a `filename →
-  content` map out. No networking, no filesystem. The same core is intended to
-  compile to WASM for a future web version.
+  content` map out. No networking, no filesystem. The same core compiles to
+  WebAssembly for the web version.
 - **`cli/`** — the console executable: argument parsing and Convex-CLI-style
   env resolution (a small side-effect-free `cli_support` library, unit-tested),
   then the HTTP fetch via convex-cpp, then core emission, then file writes.
+- **`wasm/`** — the extern "C" bridge + Emscripten build script; artifacts are
+  committed under `web/src/generated/`.
+- **`web/`** — the Vite + React web app and the Node golden-parity test.
 - **`tests/`** — GoogleTest unit + golden + live tests.
 - **`Tools/convex-ue-codegen.bat`** — build-and-run wrapper.
 
