@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Core + CLI + gtests (incl. byte-exact goldens). The live test self-skips
+  # in CI (no backend / no local.env). Requires a checkout of the sibling
+  # convex-cpp repo: since both repos are private, the CONVEX_CPP_READ_TOKEN
+  # secret must hold a fine-grained PAT with Contents:read on
+  # Potionify/convex-cpp.
+  tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: convex-ue-codegen
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Potionify/convex-cpp
+          token: ${{ secrets.CONVEX_CPP_READ_TOKEN }}
+          path: convex-cpp
+
+      - name: Configure
+        run: cmake -S convex-ue-codegen -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  # The web app embeds a committed Emscripten build of the core; the parity
+  # test asserts its output is byte-identical to tests/expected, which is
+  # what catches a core change committed without rebuilding the WASM.
+  web:
+    name: WASM parity + web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      - name: WASM parity test
+        working-directory: web
+        run: npm test
+
+      - name: Build
+        working-directory: web
+        run: npm run build
