@@ -19,11 +19,11 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: convex-ue-codegen
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: Potionify/convex-cpp
           token: ${{ secrets.CONVEX_CPP_READ_TOKEN }}
@@ -45,9 +45,9 @@ jobs:
     name: WASM parity + web build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
