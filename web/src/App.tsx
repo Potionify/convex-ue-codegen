@@ -147,8 +147,8 @@ export default function App() {
         <h1>convex-ue-codegen</h1>
         <p className="subtitle">
           Generate typed Unreal Engine C++ and Blueprint wrappers for your{" "}
-          <a href="https://convex.dev" target="_blank" rel="noreferrer">Convex</a> functions —
-          entirely in your browser, powered by the same core as the CLI, compiled to WebAssembly.
+          <a href="https://convex.dev" target="_blank" rel="noreferrer">Convex</a> functions,
+          entirely in your browser. The same emission core as the CLI, compiled to WebAssembly.
         </p>
         <p className="security-note">
           Your deploy key is used only for the direct request to your deployment and never
@@ -305,7 +305,7 @@ export default function App() {
 
       <footer>
         <p>
-          Same output as the CLI, byte for byte —{" "}
+          Same output as the CLI, byte for byte. Source:{" "}
           <a href="https://github.com/Potionify/convex-ue-codegen" target="_blank" rel="noreferrer">
             Potionify/convex-ue-codegen
           </a>
