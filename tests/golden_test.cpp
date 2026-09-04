@@ -34,6 +34,7 @@ std::map<std::string, std::string> emit_fixture() {
     convex_codegen::emit_options opts;
     opts.prefix = "ConvexApi";
     opts.stamp = kStamp;
+    opts.emit_script = true;
     return convex_codegen::emit_all(spec, opts);
 }
 
@@ -72,5 +73,6 @@ TEST(Golden, EmitsExpectedFileSet) {
     EXPECT_TRUE(files.count("ConvexApi.cpp"));
     EXPECT_TRUE(files.count("ConvexApiBP.h"));
     EXPECT_TRUE(files.count("ConvexApiBP.cpp"));
-    EXPECT_EQ(files.size(), 4u);
+    EXPECT_TRUE(files.count("ConvexApi.as"));
+    EXPECT_EQ(files.size(), 5u);
 }

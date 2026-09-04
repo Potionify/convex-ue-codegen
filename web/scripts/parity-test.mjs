@@ -43,7 +43,8 @@ function generate(module, specJson, options) {
 
 const module = await createModule();
 const spec = await readFile(fixturePath, "utf8");
-const result = generate(module, spec, { prefix: "ConvexApi", stamp: STAMP });
+// Must match the options in tests/golden_test.cpp (script wrappers on).
+const result = generate(module, spec, { prefix: "ConvexApi", stamp: STAMP, emitScript: true });
 
 if (result.error) {
   console.error(`FAIL: wasm generate returned error: ${result.error}`);

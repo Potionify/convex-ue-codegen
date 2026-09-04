@@ -612,6 +612,245 @@ void emit_blueprint(const emit_options& opt, const std::vector<function_spec>& s
 }
 
 // --------------------------------------------------------------------------
+// AngelScript (Hazelight UnrealEngine-Angelscript fork)
+// --------------------------------------------------------------------------
+//
+// One file of script-only wrappers, one namespace per Convex module under the
+// prefix. The wrappers build the args map with the plugin's value library
+// (UConvexBlueprintLibrary, bound as the `Convex::` namespace) and call the
+// ScriptCallable dynamic-delegate methods on UConvexClient.
+//
+// Optional fields: the fork's TOptional cannot hold containers and does not
+// convert from integer literals, so instead of TOptional parameters each
+// function with optional fields gets two overloads, one with the required
+// arguments only and one with every argument. The overloads always differ in
+// arity, so resolution is unambiguous.
+
+/// The AngelScript spelling of a mapped type. `float` is 64-bit in the fork,
+/// so C++ double maps to plain float.
+std::string script_type(const mapped_type& t) {
+    switch (t.cls) {
+        case arg_class::convex:
+            return "FConvexValue";
+        case arg_class::str:
+            return "FString";
+        case arg_class::flt:
+            return "float";
+        case arg_class::i64:
+            return "int64";
+        case arg_class::boolean:
+            return "bool";
+        case arg_class::bytes:
+            return "TArray<uint8>";
+        case arg_class::arr_str:
+            return "TArray<FString>";
+        case arg_class::arr_flt:
+            return "TArray<float>";
+        case arg_class::arr_i64:
+            return "TArray<int64>";
+        case arg_class::arr_bool:
+            return "TArray<bool>";
+        case arg_class::arr_convex:
+            return "TArray<FConvexValue>";
+    }
+    return "FConvexValue";
+}
+
+/// The element type of a scalar TArray class ("FString" for arr_str).
+const char* script_elem_type(arg_class array_cls) {
+    switch (array_cls) {
+        case arg_class::arr_str:
+            return "FString";
+        case arg_class::arr_flt:
+            return "float";
+        case arg_class::arr_i64:
+            return "int64";
+        case arg_class::arr_bool:
+            return "bool";
+        default:
+            return "FConvexValue";
+    }
+}
+
+/// The `Convex::` library factory for a scalar class ("Convex::MakeConvexString").
+const char* script_factory(arg_class cls) {
+    switch (cls) {
+        case arg_class::str:
+        case arg_class::arr_str:
+            return "Convex::MakeConvexString";
+        case arg_class::flt:
+        case arg_class::arr_flt:
+            return "Convex::MakeConvexFloat";
+        case arg_class::i64:
+        case arg_class::arr_i64:
+            return "Convex::MakeConvexInt";
+        case arg_class::boolean:
+        case arg_class::arr_bool:
+            return "Convex::MakeConvexBool";
+        case arg_class::bytes:
+            return "Convex::MakeConvexBytes";
+        default:
+            return "";
+    }
+}
+
+/// Script statement(s) adding one argument to a local `Args` map.
+std::string script_emit_add(const planned_arg& a, const std::string& expr,
+                            const std::string& indent) {
+    const std::string key = "\"" + a.field_name + "\"";
+    switch (a.type.cls) {
+        case arg_class::convex:
+            return indent + "Args.Add(" + key + ", " + expr + ");\n";
+        case arg_class::str:
+        case arg_class::flt:
+        case arg_class::i64:
+        case arg_class::boolean:
+        case arg_class::bytes:
+            return indent + "Args.Add(" + key + ", " + script_factory(a.type.cls) + "(" + expr +
+                   "));\n";
+        case arg_class::arr_convex:
+            return indent + "Args.Add(" + key + ", Convex::MakeConvexArray(" + expr + "));\n";
+        case arg_class::arr_str:
+        case arg_class::arr_flt:
+        case arg_class::arr_i64:
+        case arg_class::arr_bool: {
+            const std::string tmp = "_" + a.param_name + "Items";
+            std::string out;
+            out += indent + "{\n";
+            out += indent + "\tTArray<FConvexValue> " + tmp + ";\n";
+            out += indent + "\tfor (const " + script_elem_type(a.type.cls) + "& _Item : " + expr +
+                   ")\n";
+            out += indent + "\t{\n";
+            out += indent + "\t\t" + tmp + ".Add(" + script_factory(a.type.cls) + "(_Item));\n";
+            out += indent + "\t}\n";
+            out += indent + "\tArgs.Add(" + key + ", Convex::MakeConvexArray(" + tmp + "));\n";
+            out += indent + "}\n";
+            return out;
+        }
+    }
+    return {};
+}
+
+/// Body statements populating a local `Args` map. `include_optional` selects
+/// the all-arguments overload, whose optional parameters are plain values.
+std::string script_args_build(const arg_plan& plan, bool include_optional) {
+    std::string out;
+    out += "\t\tTMap<FString, FConvexValue> Args;\n";
+    for (const planned_arg& a : plan.args) {
+        if (a.optional && !include_optional) continue;
+        out += script_emit_add(a, a.param_name, "\t\t");
+    }
+    return out;
+}
+
+/// Script argument parameters, by value: required only, or every field.
+std::string script_arg_params(const arg_plan& plan, bool include_optional) {
+    if (plan.passthrough) return "TMap<FString, FConvexValue> Args";
+    std::string out;
+    for (const planned_arg& a : plan.args) {
+        if (a.optional && !include_optional) continue;
+        if (!out.empty()) out += ", ";
+        out += script_type(a.type) + " " + a.param_name;
+    }
+    return out;
+}
+
+/// Full script parameter list: Client, args, extras, callback.
+std::string script_params(const arg_plan& plan, bool include_optional,
+                          const std::string& before_callback, const std::string& callback) {
+    std::string out = "UConvexClient Client";
+    const std::string args = script_arg_params(plan, include_optional);
+    if (!args.empty()) out += ", " + args;
+    if (!before_callback.empty()) out += ", " + before_callback;
+    out += ", " + callback;
+    return out;
+}
+
+/// Emit one script function, and its all-arguments overload when the plan has
+/// optional fields. `ret` is the return type ("void" or a class), `extra` any
+/// parameters placed before the callback, `call` the client call whose
+/// argument list is completed with "Args, <callback>" by this function.
+void script_function(std::string& s, const std::string& ret, const std::string& name,
+                     const arg_plan& plan, const std::string& extra,
+                     const std::string& callback_type, const std::string& callback_name,
+                     const std::string& call_prefix, const std::string& call_extra) {
+    const bool overload = !plan.passthrough && has_optional(plan);
+    for (int pass = 0; pass < (overload ? 2 : 1); ++pass) {
+        const bool include_optional = pass == 1;
+        if (include_optional) s += "\t/// All arguments, including the optional ones.\n";
+        s += "\t" + ret + " " + name + "(" +
+             script_params(plan, include_optional, extra, callback_type + " " + callback_name) +
+             ")\n\t{\n";
+        if (!plan.passthrough) s += script_args_build(plan, include_optional);
+        s += "\t\t" + std::string(ret == "void" ? "" : "return ") + call_prefix + "Args" +
+             call_extra + ", " + callback_name + ");\n";
+        s += "\t}\n";
+        if (overload && !include_optional) s += "\n";
+    }
+}
+
+void emit_script(const emit_options& opt, const std::vector<function_spec>& specs,
+                 std::map<std::string, std::string>& files) {
+    if (!opt.emit_script) return;
+    const std::string& prefix = opt.prefix;
+    const std::vector<group> groups = group_by_namespace(specs);
+
+    std::string s = file_header(opt);
+    s += "\n// Typed AngelScript wrappers for the deployed Convex functions, for the\n";
+    s += "// Hazelight UnrealEngine-Angelscript fork. Put this file under the project's\n";
+    s += "// Script/ folder; it needs no build step and hot-reloads. Requires the Convex\n";
+    s += "// plugin. Functions with optional arguments have two overloads: required\n";
+    s += "// arguments only, and every argument. Named arguments work: Fn(Client,\n";
+    s += "// Name = \"hits\", By = 2.0, OnResult = Handler).\n\n";
+
+    for (const group& g : groups) {
+        const std::vector<resolved_fn> fns = resolve_names(g);
+        std::string ns = prefix;
+        for (const std::string& seg : g.segments) ns += "::" + seg;
+
+        s += "namespace " + ns + "\n{\n";
+        for (std::size_t i = 0; i < fns.size(); ++i) {
+            const resolved_fn& r = fns[i];
+            const function_spec& spec = *r.spec;
+            const char* dyn_call = spec.type == function_type::query      ? "Query"
+                                   : spec.type == function_type::mutation ? "Mutation"
+                                                                          : "Action";
+            const std::string path = "\"" + spec.canonical_identifier + "\"";
+            if (i != 0) s += "\n";
+
+            // --- One-shot ---
+            s += doc_comment(spec);
+            script_function(s, "void", r.call_name, r.plan, "", "FConvexResultDelegate",
+                            "OnResult", "Client." + std::string(dyn_call) + "(" + path + ", ",
+                            "");
+
+            if (spec.type != function_type::query) continue;
+
+            // --- Subscription ---
+            s += "\n";
+            script_function(s, "UConvexSubscription", r.watch_name, r.plan, "",
+                            "FConvexResultDelegate", "OnUpdate",
+                            "Client.Subscribe(" + path + ", ", "");
+
+            // --- Paginated live list ---
+            if (r.paginated) {
+                s += "\n\t/// Subscribes " + spec.canonical_identifier +
+                     " as a growing live list (the usePaginatedQuery\n";
+                s += "\t/// pattern); paginationOpts is injected by the client.\n";
+                script_function(s, "UConvexPaginatedSubscription", r.watch_paginated_name,
+                                r.paginated_plan, "int InitialNumItems",
+                                "FConvexPaginatedSnapshotDelegate", "OnUpdate",
+                                "Client.SubscribePaginated(" + path + ", ",
+                                ", InitialNumItems");
+            }
+        }
+        s += "}\n\n";
+    }
+
+    files[prefix + ".as"] = s;
+}
+
+// --------------------------------------------------------------------------
 // Optional UE module scaffolding
 // --------------------------------------------------------------------------
 
@@ -649,6 +888,7 @@ std::map<std::string, std::string> emit_all(std::string_view api_spec_json,
     std::map<std::string, std::string> files;
     emit_native(options, specs, files);
     emit_blueprint(options, specs, files);
+    emit_script(options, specs, files);
     emit_module_files(options, files);
     return files;
 }

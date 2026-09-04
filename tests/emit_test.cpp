@@ -194,6 +194,55 @@ TEST(Emit, ModuleScaffolding) {
     EXPECT_EQ(emit_fixture({}).size(), 4u);
 }
 
+TEST(Emit, ScriptWrappersOptIn) {
+    // Off by default: the .as file only appears with emit_script.
+    EXPECT_FALSE(emit_fixture({}).count("ConvexApi.as"));
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    auto files = emit_fixture(opts);
+    ASSERT_TRUE(files.count("ConvexApi.as"));
+    const std::string& as = files.at("ConvexApi.as");
+    // Nested namespaces under the prefix, no C++ includes or macros.
+    EXPECT_TRUE(contains(as, "namespace ConvexApi::Admin::Tools\n{"));
+    EXPECT_FALSE(contains(as, "#include"));
+    EXPECT_FALSE(contains(as, "UFUNCTION"));
+    // Script types: 64-bit float, references instead of pointers, delegates
+    // for callbacks, and the ScriptCallable client methods.
+    EXPECT_TRUE(contains(as, "void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)"));
+    EXPECT_TRUE(contains(as, "UConvexSubscription WatchX(UConvexClient Client, FString A, FConvexResultDelegate OnUpdate)"));
+    EXPECT_TRUE(contains(as, "Client.Query(\"fooBar:x\", Args, OnResult);"));
+    EXPECT_TRUE(contains(as, "return Client.Subscribe(\"fooBar:x\", Args, OnUpdate);"));
+    EXPECT_TRUE(contains(as, "Convex::MakeConvexString(A)"));
+    EXPECT_FALSE(contains(as, "TOptional"));
+    EXPECT_FALSE(contains(as, "double"));
+    EXPECT_FALSE(contains(as, "UConvexClient*"));
+    // Paginated queries get the live-list wrapper on the client's script API.
+    EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription WatchListPaginatedPaginated("));
+    EXPECT_TRUE(contains(as, "int InitialNumItems, FConvexPaginatedSnapshotDelegate OnUpdate)"));
+    EXPECT_TRUE(contains(as, "return Client.SubscribePaginated(\"messages:listPaginated\", Args, InitialNumItems, OnUpdate);"));
+}
+
+TEST(Emit, ScriptOptionalArgsBecomeOverloads) {
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = emit_fixture(opts).at("ConvexApi.as");
+    // A function with optional fields is emitted twice: required-only and
+    // all-arguments, the second marked by its doc line.
+    EXPECT_TRUE(contains(as, "/// All arguments, including the optional ones."));
+    const std::size_t first = as.find("void Reset(UConvexClient Client, FConvexResultDelegate OnResult)");
+    const std::size_t full = as.find("void Reset(UConvexClient Client, bool Force, FConvexResultDelegate OnResult)");
+    ASSERT_NE(first, std::string::npos);
+    ASSERT_NE(full, std::string::npos);
+    EXPECT_LT(first, full);
+    EXPECT_TRUE(contains(as, "Args.Add(\"force\", Convex::MakeConvexBool(Force));"));
+    // The required-only overload never references the optional parameter.
+    const std::size_t first_end = as.find("\t}\n", first);
+    EXPECT_EQ(as.substr(first, first_end - first).find("Force"), std::string::npos);
+    // Optional scalars of every kind become plain parameters in the full overload.
+    EXPECT_TRUE(contains(as, "float Count, FConvexResultDelegate OnResult)"));
+    EXPECT_TRUE(contains(as, "FConvexValue Nested, FConvexResultDelegate OnResult)"));
+}
+
 TEST(Emit, IncludeInternalEmitsSecret) {
     convex_codegen::emit_options opts;
     opts.include_internal = true;

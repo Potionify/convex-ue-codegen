@@ -2,8 +2,9 @@
 
 A standalone C++ console tool that connects to a [Convex](https://convex.dev)
 deployment, fetches its function specification, and emits typed
-[Unreal Engine](https://www.unrealengine.com) C++ wrappers — both native and
-Blueprint-callable — for every deployed function. It lets UE developers
+[Unreal Engine](https://www.unrealengine.com) wrappers for every deployed
+function: native C++, Blueprint-callable, and optionally AngelScript for the
+[Hazelight UnrealEngine-Angelscript](https://angelscript.hazelight.se) fork. It lets UE developers
 regenerate their typed Convex API from a `.bat` file without opening the editor.
 
 It builds on [convex-cpp](https://github.com/Potionify/convex-cpp) (HTTP client
@@ -23,6 +24,11 @@ prefix `ConvexApi`, overridable with `--prefix`):
 With `--emit-module <Name>` it additionally writes `<Name>.Build.cs` and
 `<Name>Module.cpp` so the output folder drops into a UE project as a complete
 module (depending on `ConvexClient` + `ConvexCore`).
+
+With `--script-out <dir>` it additionally writes `<Prefix>.as`, AngelScript
+wrappers for the Hazelight fork, into `<dir>` (your project's `Script/`
+folder). The script wrappers need no C++ build: the fork hot-reloads them in
+the running editor. See [AngelScript output](#angelscript-output).
 
 Typed arguments come from each function's args validator: an `object` validator
 becomes one C++ parameter per field (`string`→`FString`, `number`→`double`,
@@ -73,7 +79,7 @@ Tools\convex-ue-codegen.bat --out MyGame\Source\ConvexApi --emit-module ConvexAp
 ```
 convex-ue-codegen --out <dir> [--url <u>] [--deploy-key <k>] [--env-file <path>]
                   [--spec-json <file>] [--prefix ConvexApi] [--include-internal]
-                  [--stamp <text>] [--emit-module <Name>]
+                  [--stamp <text>] [--emit-module <Name>] [--script-out <dir>]
 ```
 
 - `--out <dir>` (required) — output directory, created if missing.
@@ -88,6 +94,8 @@ convex-ue-codegen --out <dir> [--url <u>] [--deploy-key <k>] [--env-file <path>]
   every file (for reproducible output). Without it, the line is
   `// Source: <deployment url or spec file>`.
 - `--emit-module <Name>` — also emit the `.Build.cs` + `Module.cpp` scaffolding.
+- `--script-out <dir>` — also emit `<Prefix>.as` (AngelScript wrappers) into
+  `<dir>`. Created if missing.
 
 Examples:
 
@@ -157,6 +165,49 @@ The generated files only compile inside a UE module (they include
 them into a module that depends on `ConvexClient` + `ConvexCore` — or use
 `--emit-module` to generate that module's scaffolding too.
 
+### AngelScript output
+
+`--script-out <dir>` adds one more file, written to `<dir>` instead of `<out>`:
+
+```
+<script-out>/
+  ConvexApi.as       AngelScript wrappers (one namespace per module)
+```
+
+It targets the [Hazelight UnrealEngine-Angelscript](https://angelscript.hazelight.se)
+fork of UE, which loads scripts from the project's `Script/` folder and
+hot-reloads them, so regenerating the API never needs a C++ build. The
+wrappers call the Convex plugin's script-callable client methods and build
+arguments with its value library; the plugin must be enabled, but no generated
+C++ is required.
+
+Shape, for `counters:increment` with a required `name` and an optional `by`:
+
+```angelscript
+namespace ConvexApi::Counters
+{
+    void Increment(UConvexClient Client, FString Name, FConvexResultDelegate OnResult);
+    void Increment(UConvexClient Client, FString Name, float By, FConvexResultDelegate OnResult);
+    UConvexSubscription WatchGet(UConvexClient Client, FString Name, FConvexResultDelegate OnUpdate);
+}
+```
+
+Script types follow the fork: `number` is `float` (64-bit there), `int64` is
+`int64`, `bytes` is `TArray<uint8>`, objects and unions are `FConvexValue`.
+Optional fields become a second overload that takes every argument, because
+the fork's `TOptional` cannot hold containers. Named arguments read well:
+
+```angelscript
+FConvexResultDelegate Handler;
+Handler.BindUFunction(this, n"OnIncremented");
+ConvexApi::Counters::Increment(Client, Name = "hits", By = 2.0, OnResult = Handler);
+```
+
+Paginated queries get a `Watch<Name>Paginated` wrapper returning
+`UConvexPaginatedSubscription`, taking `int InitialNumItems` and an
+`FConvexPaginatedSnapshotDelegate`. The `.as` file is covered by the same
+byte-exact golden test as the C++ output.
+
 ## Testing
 
 ```bash
@@ -208,14 +259,14 @@ committed, so the web app builds without the Emscripten SDK. To rebuild after
 changing the core:
 
 ```bat
-rem needs emcc on PATH (emsdk install latest / activate latest / emsdk_env.bat)
+rem needs em++ on PATH (emsdk install latest / activate latest / emsdk_env.bat)
 wasm\build-wasm.bat
 ```
 
 or on any shell:
 
 ```bash
-emcc -O2 -std=c++20 -fwasm-exceptions -Icore/include -Ithird_party \
+em++ -O2 -std=c++20 -fwasm-exceptions -Icore/include -Ithird_party \
   core/src/naming.cpp core/src/validator.cpp core/src/type_map.cpp \
   core/src/api_spec.cpp core/src/emit.cpp wasm/wrapper.cpp \
   -sMODULARIZE=1 -sEXPORT_ES6=1 \

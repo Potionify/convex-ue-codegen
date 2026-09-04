@@ -7,6 +7,8 @@ export interface GenerateOptions {
   prefix?: string;
   includeInternal?: boolean;
   emitModule?: string;
+  /** Also emit <prefix>.as, AngelScript wrappers for the Hazelight UE fork. */
+  emitScript?: boolean;
   stamp?: string;
   sourceLabel?: string;
 }

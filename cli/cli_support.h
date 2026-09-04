@@ -31,8 +31,15 @@ struct cli_args {
     bool include_internal = false;
     std::optional<std::string> stamp;
     std::optional<std::string> emit_module;
+    /// When set, also emit the AngelScript wrappers (<prefix>.as) into this
+    /// directory (the project's Script/ folder on the Hazelight fork).
+    std::optional<std::string> script_out_dir;
     bool help = false;
 };
+
+/// True for generated files that belong in the project's Script/ folder (the
+/// AngelScript wrappers) rather than in the C++ output directory.
+bool is_script_file(const std::string& filename);
 
 /// Parse argv (argv[0] is the program name). Throws cli_error on bad usage.
 cli_args parse_args(int argc, const char* const* argv);

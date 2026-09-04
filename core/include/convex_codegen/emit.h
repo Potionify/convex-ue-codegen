@@ -30,6 +30,12 @@ struct emit_options {
     /// When set, additionally emit "<name>.Build.cs" and "<name>Module.cpp" so
     /// the output folder drops into a UE project as a complete module.
     std::optional<std::string> emit_module;
+
+    /// When true, additionally emit "<prefix>.as": typed AngelScript wrappers
+    /// for the Hazelight UnrealEngine-Angelscript fork. The file belongs in
+    /// the project's Script/ folder, not next to the C++ output, and needs no
+    /// build step: the fork hot-reloads it.
+    bool emit_script = false;
 };
 
 /// Emit every generated file. Keyed by filename, values are full file

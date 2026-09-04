@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
         options.include_internal = args.include_internal;
         options.stamp = args.stamp;
         options.emit_module = args.emit_module;
+        options.emit_script = args.script_out_dir.has_value();
 
         std::string spec_json;
         if (args.spec_json) {
@@ -127,12 +128,31 @@ int main(int argc, char** argv) {
         fs::create_directories(out_dir, ec);
         if (ec) throw cli::cli_error("cannot create --out directory: " + ec.message());
 
-        for (const auto& [name, contents] : files) {
-            write_file(out_dir / name, contents);
+        // AngelScript files live in the project's Script/ root, not in a C++
+        // module, so they get their own destination.
+        fs::path script_dir;
+        if (args.script_out_dir) {
+            script_dir = *args.script_out_dir;
+            fs::create_directories(script_dir, ec);
+            if (ec) throw cli::cli_error("cannot create --script-out directory: " + ec.message());
         }
 
-        std::cout << "convex-ue-codegen: " << function_count << " function(s), " << files.size()
-                  << " file(s) -> " << out_dir.string() << "\n";
+        std::size_t script_count = 0;
+        for (const auto& [name, contents] : files) {
+            if (cli::is_script_file(name)) {
+                write_file(script_dir / name, contents);
+                ++script_count;
+            } else {
+                write_file(out_dir / name, contents);
+            }
+        }
+
+        std::cout << "convex-ue-codegen: " << function_count << " function(s), "
+                  << (files.size() - script_count) << " file(s) -> " << out_dir.string();
+        if (script_count != 0) {
+            std::cout << ", " << script_count << " script file(s) -> " << script_dir.string();
+        }
+        std::cout << "\n";
         return 0;
     } catch (const std::exception& ex) {
         std::cerr << "error: " << ex.what() << "\n";

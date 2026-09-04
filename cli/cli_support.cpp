@@ -40,6 +40,10 @@ std::string require_value(int argc, const char* const* argv, int& i, const std::
 
 }  // namespace
 
+bool is_script_file(const std::string& filename) {
+    return filename.size() > 3 && filename.compare(filename.size() - 3, 3, ".as") == 0;
+}
+
 cli_args parse_args(int argc, const char* const* argv) {
     cli_args out;
     for (int i = 1; i < argc; ++i) {
@@ -64,6 +68,8 @@ cli_args parse_args(int argc, const char* const* argv) {
             out.stamp = require_value(argc, argv, i, arg);
         } else if (arg == "--emit-module") {
             out.emit_module = require_value(argc, argv, i, arg);
+        } else if (arg == "--script-out") {
+            out.script_out_dir = require_value(argc, argv, i, arg);
         } else {
             throw cli_error("unknown argument: " + arg);
         }
@@ -95,6 +101,9 @@ std::string usage_text() {
         "  --include-internal     Also emit internal-visibility functions.\n"
         "  --stamp <text>         Verbatim provenance line for every file (determinism).\n"
         "  --emit-module <Name>   Also emit <Name>.Build.cs and <Name>Module.cpp.\n"
+        "  --script-out <dir>     Also emit <prefix>.as, AngelScript wrappers for the\n"
+        "                         Hazelight UnrealEngine-Angelscript fork, into <dir>\n"
+        "                         (your project's Script folder). Created if missing.\n"
         "  -h, --help             Show this help.\n"
         "\n"
         "Deployment resolution (when --spec-json is not given):\n"

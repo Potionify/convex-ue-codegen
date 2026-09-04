@@ -42,8 +42,8 @@ extern "C" {
 ///                  envelope), UTF-8.
 /// `options_json` — optional (may be null/empty) JSON object:
 ///                  {"prefix"?: string, "includeInternal"?: bool,
-///                   "emitModule"?: string, "stamp"?: string,
-///                   "sourceLabel"?: string}.
+///                   "emitModule"?: string, "emitScript"?: bool,
+///                   "stamp"?: string, "sourceLabel"?: string}.
 ///
 /// Returns a malloc'd UTF-8 JSON string, either
 ///   {"files": {"<name>": "<content>", ...}}   on success, or
@@ -70,6 +70,9 @@ const char* convex_ue_codegen_generate(const char* spec_json, const char* option
             if (opts.contains("emitModule") && opts["emitModule"].is_string() &&
                 !opts["emitModule"].get<std::string>().empty()) {
                 options.emit_module = opts["emitModule"].get<std::string>();
+            }
+            if (opts.contains("emitScript") && opts["emitScript"].is_boolean()) {
+                options.emit_script = opts["emitScript"].get<bool>();
             }
             if (opts.contains("stamp") && opts["stamp"].is_string()) {
                 options.stamp = opts["stamp"].get<std::string>();

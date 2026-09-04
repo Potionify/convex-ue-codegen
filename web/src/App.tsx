@@ -26,6 +26,7 @@ export default function App() {
   const [prefix, setPrefix] = useState("ConvexApi");
   const [includeInternal, setIncludeInternal] = useState(false);
   const [emitModule, setEmitModule] = useState("");
+  const [emitScript, setEmitScript] = useState(false);
 
   // --- output ---
   const [files, setFiles] = useState<GeneratedFiles | null>(null);
@@ -107,6 +108,7 @@ export default function App() {
         prefix: prefix.trim() || "ConvexApi",
         includeInternal,
         emitModule: emitModule.trim() || undefined,
+        emitScript,
         sourceLabel: specSource,
       });
       setFiles(produced);
@@ -114,7 +116,7 @@ export default function App() {
     } catch (error) {
       setGenerateError(error instanceof Error ? error.message : String(error));
     }
-  }, [specText, prefix, includeInternal, emitModule, specSource]);
+  }, [specText, prefix, includeInternal, emitModule, emitScript, specSource]);
 
   const handleCopy = useCallback(
     async (name: string) => {
@@ -248,6 +250,14 @@ export default function App() {
               onChange={(e) => setIncludeInternal(e.target.checked)}
             />
             Include internal functions
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={emitScript}
+              onChange={(e) => setEmitScript(e.target.checked)}
+            />
+            AngelScript wrappers (.as, for the Hazelight UE fork)
           </label>
         </div>
         <button className="primary" onClick={() => void handleGenerate()} disabled={!specText.trim()}>
