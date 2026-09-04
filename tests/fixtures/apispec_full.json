@@ -164,7 +164,30 @@
           }
         }
       },
-      "returns": { "type": "any" }
+      "returns": {
+        "type": "object",
+        "value": {
+          "page": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+              "type": "object",
+              "value": {
+                "_id": { "fieldType": { "type": "id", "tableName": "messages" }, "optional": false },
+                "_creationTime": { "fieldType": { "type": "number" }, "optional": false },
+                "author": { "fieldType": { "type": "string" }, "optional": false },
+                "body": { "fieldType": { "type": "string" }, "optional": false },
+                "channel": { "fieldType": { "type": "string" }, "optional": false },
+                "edited": { "fieldType": { "type": "boolean" }, "optional": true }
+              }
+            }
+            },
+            "optional": false
+          },
+          "isDone": { "fieldType": { "type": "boolean" }, "optional": false },
+          "continueCursor": { "fieldType": { "type": "string" }, "optional": false }
+        }
+      }
     },
     {
       "identifier": "messages.js:listBad",
@@ -191,6 +214,43 @@
       "functionType": "HttpAction",
       "method": "GET",
       "path": "/webhook"
+    },
+    {
+      "identifier": "messages.js:list",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "channel": { "fieldType": { "type": "string" }, "optional": false }
+        }
+      },
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "object",
+          "value": {
+            "_id": { "fieldType": { "type": "id", "tableName": "messages" }, "optional": false },
+            "_creationTime": { "fieldType": { "type": "number" }, "optional": false },
+            "author": { "fieldType": { "type": "string" }, "optional": false },
+            "body": { "fieldType": { "type": "string" }, "optional": false },
+            "channel": { "fieldType": { "type": "string" }, "optional": false },
+            "edited": { "fieldType": { "type": "boolean" }, "optional": true }
+          }
+        }
+      }
+    },
+    {
+      "identifier": "counters.js:get",
+      "functionType": "Query",
+      "visibility": { "kind": "public" },
+      "args": {
+        "type": "object",
+        "value": {
+          "name": { "fieldType": { "type": "string" }, "optional": false }
+        }
+      },
+      "returns": { "type": "number" }
     },
     {
       "identifier": "_system/frontend/foo.js:bar",

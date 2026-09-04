@@ -16,6 +16,20 @@ void ConvexApi::Admin::Tools::Reset(UConvexClient& Client, const TOptional<bool>
 	Client.MutationNative(TEXT("admin/tools:reset"), Args, MoveTemp(OnResult));
 }
 
+void ConvexApi::Counters::Get(UConvexClient& Client, const FString& Name, FConvexResultNative OnResult)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("name"), FConvexValue::String(Name));
+	Client.QueryNative(TEXT("counters:get"), Args, MoveTemp(OnResult));
+}
+
+UConvexSubscription* ConvexApi::Counters::WatchGet(UConvexClient& Client, const FString& Name, FConvexResultNative OnUpdate)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("name"), FConvexValue::String(Name));
+	return Client.SubscribeNative(TEXT("counters:get"), Args, MoveTemp(OnUpdate));
+}
+
 void ConvexApi::FooBar::X(UConvexClient& Client, const FString& A, FConvexResultNative OnResult)
 {
 	TMap<FString, FConvexValue> Args;
@@ -42,6 +56,20 @@ UConvexSubscription* ConvexApi::FooBar::WatchX_2(UConvexClient& Client, const FS
 	TMap<FString, FConvexValue> Args;
 	Args.Add(TEXT("a"), FConvexValue::String(A));
 	return Client.SubscribeNative(TEXT("foo_bar:x"), Args, MoveTemp(OnUpdate));
+}
+
+void ConvexApi::Messages::List(UConvexClient& Client, const FString& Channel, FConvexResultNative OnResult)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Client.QueryNative(TEXT("messages:list"), Args, MoveTemp(OnResult));
+}
+
+UConvexSubscription* ConvexApi::Messages::WatchList(UConvexClient& Client, const FString& Channel, FConvexResultNative OnUpdate)
+{
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	return Client.SubscribeNative(TEXT("messages:list"), Args, MoveTemp(OnUpdate));
 }
 
 void ConvexApi::Messages::ListBad(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult)

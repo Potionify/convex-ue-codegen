@@ -205,7 +205,7 @@ TEST(Emit, ScriptWrappersOptIn) {
     // Nested namespaces under the prefix, no C++ includes or macros.
     EXPECT_TRUE(contains(as, "namespace ConvexApi::Admin::Tools\n{"));
     EXPECT_FALSE(contains(as, "#include"));
-    EXPECT_FALSE(contains(as, "UFUNCTION"));
+    EXPECT_FALSE(contains(as, "GENERATED_BODY"));
     // Script types: 64-bit float, references instead of pointers, delegates
     // for callbacks, and the ScriptCallable client methods.
     EXPECT_TRUE(contains(as, "void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)"));
@@ -217,9 +217,98 @@ TEST(Emit, ScriptWrappersOptIn) {
     EXPECT_FALSE(contains(as, "double"));
     EXPECT_FALSE(contains(as, "UConvexClient*"));
     // Paginated queries get the live-list wrapper on the client's script API.
+    // The fixture's paginated query declares its page shape, so the wrapper
+    // takes the typed page delegate and routes through an adapter.
     EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription WatchListPaginatedPaginated("));
-    EXPECT_TRUE(contains(as, "int InitialNumItems, FConvexPaginatedSnapshotDelegate OnUpdate)"));
-    EXPECT_TRUE(contains(as, "return Client.SubscribePaginated(\"messages:listPaginated\", Args, InitialNumItems, OnUpdate);"));
+    EXPECT_TRUE(contains(as, "int InitialNumItems, FConvexApiMessagesListPaginatedPageDelegate OnUpdate)"));
+    EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription Subscription = Client.SubscribePaginated(\"messages:listPaginated\", Args, InitialNumItems, Handler);"));
+}
+
+TEST(Emit, ScriptStructsDedupeByShape) {
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = emit_fixture(opts).at("ConvexApi.as");
+    // messages:list returns array<doc> and messages:listPaginated returns a
+    // page of the same doc shape: one struct, named after the first function
+    // in sorted order, an array return naming its element "Element".
+    EXPECT_TRUE(contains(as, "struct FConvexApiMessagesListElement\n{"));
+    EXPECT_FALSE(contains(as, "struct FConvexApiMessagesListPaginatedResultPageElement"));
+    EXPECT_TRUE(contains(as, "TArray<FConvexApiMessagesListElement> Page;"));
+    // An object return is "<Base>Result"; nested objects append the field.
+    EXPECT_TRUE(contains(as, "struct FConvexApiSinkKitchenSinkResult\n{"));
+    EXPECT_TRUE(contains(as, "struct FConvexApiSinkKitchenSinkNested\n{"));
+    EXPECT_TRUE(contains(as, "struct FConvexApiSinkKitchenSinkNestedDeep\n{"));
+    EXPECT_TRUE(contains(as, "struct FConvexApiSinkKitchenSinkItemsElement\n{"));
+    // Members: script float for number, string for id, system fields lose
+    // their leading underscore like every other PascalCased name, and the
+    // shape line documents the wire names.
+    EXPECT_TRUE(contains(as, "/// object{ _creationTime: number, _id: id<messages>, author: string, body: string, channel: string, edited?: boolean }"));
+    EXPECT_TRUE(contains(as, "\tfloat CreationTime = 0.0;\n"));
+    EXPECT_TRUE(contains(as, "\tFString Id;\n"));
+    EXPECT_TRUE(contains(as, "Out.Id = Value.Get(\"_id\").AsString();"));
+    // Decode and Encode live in the Types namespace; Encode overloads by struct.
+    EXPECT_TRUE(contains(as, "namespace ConvexApi::Types\n{"));
+    EXPECT_TRUE(contains(as, "FConvexApiMessagesListElement DecodeMessagesListElement(FConvexValue Value)"));
+    EXPECT_TRUE(contains(as, "FConvexValue Encode(FConvexApiMessagesListElement In)"));
+    EXPECT_TRUE(contains(as, "Out.Author = Value.Get(\"author\").AsString();"));
+    EXPECT_TRUE(contains(as, "Fields.Add(\"author\", Convex::MakeConvexString(In.Author));"));
+    // A nested struct decodes through its own function, qualified.
+    EXPECT_TRUE(contains(as, "Out.Deep = ConvexApi::Types::DecodeSinkKitchenSinkNestedDeep(Value.Get(\"deep\"));"));
+    EXPECT_TRUE(contains(as, "Fields.Add(\"deep\", ConvexApi::Types::Encode(In.Deep));"));
+}
+
+TEST(Emit, ScriptOptionalStructFieldsGetHasFlag) {
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = emit_fixture(opts).at("ConvexApi.as");
+    EXPECT_TRUE(contains(as, "\tbool Edited = false;\n\tbool bHasEdited = false;"));
+    EXPECT_TRUE(contains(as, "\t\tif (Value.HasField(\"edited\"))\n\t\t{\n\t\t\tOut.bHasEdited = true;\n\t\t\tOut.Edited = Value.Get(\"edited\").AsBool();\n\t\t}\n"));
+    EXPECT_TRUE(contains(as, "\t\tif (In.bHasEdited)\n\t\t{\n\t\t\tFields.Add(\"edited\", Convex::MakeConvexBool(In.Edited));\n\t\t}\n"));
+}
+
+TEST(Emit, ScriptTypedReturnsUseDelegateAndAdapter) {
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = emit_fixture(opts).at("ConvexApi.as");
+    // Object return.
+    EXPECT_TRUE(contains(as, "delegate void FConvexApiSinkKitchenSinkDelegate(FConvexApiSinkKitchenSinkResult Value, FConvexResult Result);"));
+    EXPECT_TRUE(contains(as, "class UConvexApiSinkKitchenSinkAdapter : UObject\n{"));
+    EXPECT_TRUE(contains(as, "Value = ConvexApi::Types::DecodeSinkKitchenSinkResult(Result.Value);"));
+    EXPECT_TRUE(contains(as, "Typed.ExecuteIfBound(Value, Result);"));
+    // Array return decodes element by element.
+    EXPECT_TRUE(contains(as, "delegate void FConvexApiMessagesListDelegate(TArray<FConvexApiMessagesListElement> Value, FConvexResult Result);"));
+    EXPECT_TRUE(contains(as, "Value.Add(ConvexApi::Types::DecodeMessagesListElement(_Item));"));
+    // Scalar return.
+    EXPECT_TRUE(contains(as, "delegate void FConvexApiCountersGetDelegate(float Value, FConvexResult Result);"));
+    EXPECT_TRUE(contains(as, "\t\tfloat Value = 0.0;\n\t\tif (Result.bSuccess)\n\t\t{\n\t\t\tValue = Result.Value.AsFloat();\n\t\t}\n"));
+    // Wrappers: one-shot binds the adapter and hands the raw delegate to the
+    // client, which roots the adapter until the callback fires; a watch
+    // attaches the adapter to the subscription instead.
+    EXPECT_TRUE(contains(as, "void Get(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnResult)"));
+    EXPECT_TRUE(contains(as, "UConvexApiCountersGetAdapter Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));"));
+    EXPECT_TRUE(contains(as, "Adapter.Typed = OnResult;\n\t\tFConvexResultDelegate Handler;\n\t\tHandler.BindUFunction(Adapter, n\"OnResult\");\n\t\tClient.Query(\"counters:get\", Args, Handler);"));
+    EXPECT_TRUE(contains(as, "UConvexSubscription Subscription = Client.Subscribe(\"counters:get\", Args, Handler);\n\t\tSubscription.AttachListener(Adapter);\n\t\treturn Subscription;"));
+    // Paginated page adapter decodes the snapshot items.
+    EXPECT_TRUE(contains(as, "delegate void FConvexApiMessagesListPaginatedPageDelegate(TArray<FConvexApiMessagesListElement> Results, FConvexPaginatedSnapshot Snapshot);"));
+    EXPECT_TRUE(contains(as, "void OnSnapshot(FConvexPaginatedSnapshot Snapshot)"));
+    EXPECT_TRUE(contains(as, "Handler.BindUFunction(Adapter, n\"OnSnapshot\");"));
+    // A function without a declared return keeps the raw delegate and no adapter.
+    EXPECT_TRUE(contains(as, "void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)"));
+    EXPECT_FALSE(contains(as, "UConvexApiFooBarXAdapter"));
+}
+
+TEST(Emit, ScriptObjectArgsAreStructs) {
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = emit_fixture(opts).at("ConvexApi.as");
+    // Object-typed args (nested, arrays of objects) take the struct; the body
+    // encodes them. Unions, records, and any stay FConvexValue.
+    EXPECT_TRUE(contains(as, "TArray<FConvexApiSinkKitchenSinkItemsElement> Items,"));
+    EXPECT_TRUE(contains(as, "_ItemsItems.Add(ConvexApi::Types::Encode(_Item));"));
+    EXPECT_TRUE(contains(as, "Args.Add(\"nested\", ConvexApi::Types::Encode(Nested));"));
+    EXPECT_TRUE(contains(as, "FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni,"));
+    // An empty object and nested containers stay FConvexValue.
+    EXPECT_FALSE(contains(as, "TArray<TArray"));
 }
 
 TEST(Emit, ScriptOptionalArgsBecomeOverloads) {
@@ -240,7 +329,7 @@ TEST(Emit, ScriptOptionalArgsBecomeOverloads) {
     EXPECT_EQ(as.substr(first, first_end - first).find("Force"), std::string::npos);
     // Optional scalars of every kind become plain parameters in the full overload.
     EXPECT_TRUE(contains(as, "float Count, FConvexResultDelegate OnResult)"));
-    EXPECT_TRUE(contains(as, "FConvexValue Nested, FConvexResultDelegate OnResult)"));
+    EXPECT_TRUE(contains(as, "FConvexApiSinkKitchenSinkNested Nested, FConvexApiSinkKitchenSinkDelegate OnResult)"));
 }
 
 TEST(Emit, IncludeInternalEmitsSecret) {

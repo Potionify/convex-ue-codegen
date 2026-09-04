@@ -30,6 +30,17 @@ namespace Tools
 }  // namespace Tools
 }  // namespace Admin
 
+namespace Counters
+{
+
+	/// counters.js:get (Query)
+	/// args:    object{ name: string }
+	/// returns: number
+	void Get(UConvexClient& Client, const FString& Name, FConvexResultNative OnResult);
+	UConvexSubscription* WatchGet(UConvexClient& Client, const FString& Name, FConvexResultNative OnUpdate);
+
+}  // namespace Counters
+
 namespace FooBar
 {
 
@@ -50,6 +61,12 @@ namespace FooBar
 namespace Messages
 {
 
+	/// messages.js:list (Query)
+	/// args:    object{ channel: string }
+	/// returns: array<object{ _creationTime: number, _id: id<messages>, author: string, body: string, channel: string, edited?: boolean }>
+	void List(UConvexClient& Client, const FString& Channel, FConvexResultNative OnResult);
+	UConvexSubscription* WatchList(UConvexClient& Client, const FString& Channel, FConvexResultNative OnUpdate);
+
 	/// messages.js:listBad (Query)
 	/// args:    object{ channel: string, paginationOpts: object{ numItems: number } }
 	/// returns: any
@@ -58,7 +75,7 @@ namespace Messages
 
 	/// messages.js:listPaginated (Query)
 	/// args:    object{ channel: string, paginationOpts: object{ cursor: union<string | null>, endCursor?: union<string | null>, id?: number, maximumBytesRead?: number, maximumRowsRead?: number, numItems: number } }
-	/// returns: any
+	/// returns: object{ continueCursor: string, isDone: boolean, page: array<object{ _creationTime: number, _id: id<messages>, author: string, body: string, channel: string, edited?: boolean }> }
 	void ListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnResult);
 	UConvexSubscription* WatchListPaginated(UConvexClient& Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultNative OnUpdate);
 	/// Subscribes messages:listPaginated as a growing live list (the usePaginatedQuery

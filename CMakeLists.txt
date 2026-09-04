@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(convex_ue_codegen VERSION 0.1.0 LANGUAGES CXX)
+project(convex_ue_codegen VERSION 0.2.0 LANGUAGES CXX)
 
 if(PROJECT_IS_TOP_LEVEL)
     set(CODEGEN_DEV_DEFAULT ON)

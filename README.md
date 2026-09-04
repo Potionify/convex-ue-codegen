@@ -177,25 +177,48 @@ them into a module that depends on `ConvexClient` + `ConvexCore` — or use
 It targets the [Hazelight UnrealEngine-Angelscript](https://angelscript.hazelight.se)
 fork of UE, which loads scripts from the project's `Script/` folder and
 hot-reloads them, so regenerating the API never needs a C++ build. The
-wrappers call the Convex plugin's script-callable client methods and build
-arguments with its value library; the plugin must be enabled, but no generated
-C++ is required.
+wrappers call the Convex plugin's script-callable client methods, build
+arguments with its value library, and read results through its script
+mixins; the plugin must be enabled (0.2.0 or later), but no generated C++ is
+required.
 
-Shape, for `counters:increment` with a required `name` and an optional `by`:
+The file has four parts, in order:
+
+1. Structs. Every object shape the deployed functions declare, in
+   `args` or `returns`, becomes a script `struct`. Shapes are deduplicated,
+   so a document returned by several functions is one struct, named after
+   the first function that uses it in sorted order: `messages:list`
+   returning `array<doc>` gives `FConvexApiMessagesListElement`; an object
+   return gives `<Base>Result`; a nested object appends its field name. An
+   optional field gets a `bHas<Field>` companion, because the fork's
+   `TOptional` cannot hold containers.
+2. `ConvexApi::Types`. `Decode<Name>(FConvexValue)` and
+   `Encode(<struct>)` for every struct.
+3. Delegates and adapters. A function with a declared return gets a
+   typed delegate, `delegate void FConvexApiCountersGetDelegate(float Value,
+   FConvexResult Result)`, and a small adapter class that decodes the raw
+   result before executing it. The raw `FConvexResult` is always the second
+   parameter, so errors and the undecoded value stay reachable.
+4. Wrappers. One namespace per module.
+
+Shape, for `counters:get` returning `number` and `counters:increment` with a
+required `name`, an optional `by`, and no declared return:
 
 ```angelscript
 namespace ConvexApi::Counters
 {
+    void Get(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnResult);
+    UConvexSubscription WatchGet(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnUpdate);
     void Increment(UConvexClient Client, FString Name, FConvexResultDelegate OnResult);
     void Increment(UConvexClient Client, FString Name, float By, FConvexResultDelegate OnResult);
-    UConvexSubscription WatchGet(UConvexClient Client, FString Name, FConvexResultDelegate OnUpdate);
 }
 ```
 
 Script types follow the fork: `number` is `float` (64-bit there), `int64` is
-`int64`, `bytes` is `TArray<uint8>`, objects and unions are `FConvexValue`.
-Optional fields become a second overload that takes every argument, because
-the fork's `TOptional` cannot hold containers. Named arguments read well:
+`int64`, `bytes` is `TArray<uint8>`, declared objects are structs, and
+unions, records, `any`, and nested containers are `FConvexValue`. Optional
+arguments become a second overload that takes every argument. Named
+arguments read well:
 
 ```angelscript
 FConvexResultDelegate Handler;
@@ -204,9 +227,15 @@ ConvexApi::Counters::Increment(Client, Name = "hits", By = 2.0, OnResult = Handl
 ```
 
 Paginated queries get a `Watch<Name>Paginated` wrapper returning
-`UConvexPaginatedSubscription`, taking `int InitialNumItems` and an
-`FConvexPaginatedSnapshotDelegate`. The `.as` file is covered by the same
-byte-exact golden test as the C++ output.
+`UConvexPaginatedSubscription` and taking `int InitialNumItems`. When the
+query declares the `PaginationResult` shape, the wrapper takes a typed page
+delegate, `(TArray<Element> Results, FConvexPaginatedSnapshot Snapshot)`;
+otherwise an `FConvexPaginatedSnapshotDelegate`.
+
+Adapter lifetime is the plugin's job: the client keeps a one-shot adapter
+alive until its callback fires, and a watch wrapper attaches its adapter to
+the returned subscription. The `.as` file is covered by the same byte-exact
+golden test as the C++ output.
 
 ## Testing
 

@@ -19,6 +19,30 @@ void UConvexApiAdminToolsLibrary::Reset(UConvexClient* Client, FConvexResultDele
 	Client->Mutation(TEXT("admin/tools:reset"), Args, OnResult);
 }
 
+void UConvexApiCountersLibrary::Get(UConvexClient* Client, const FString& Name, FConvexResultDelegate OnResult)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex Get: Client is null"));
+		return;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("name"), FConvexValue::String(Name));
+	Client->Query(TEXT("counters:get"), Args, OnResult);
+}
+
+UConvexSubscription* UConvexApiCountersLibrary::WatchGet(UConvexClient* Client, const FString& Name, FConvexResultDelegate OnUpdate)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex WatchGet: Client is null"));
+		return nullptr;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("name"), FConvexValue::String(Name));
+	return Client->Subscribe(TEXT("counters:get"), Args, OnUpdate);
+}
+
 void UConvexApiFooBarLibrary::X(UConvexClient* Client, const FString& A, FConvexResultDelegate OnResult)
 {
 	if (Client == nullptr)
@@ -65,6 +89,30 @@ UConvexSubscription* UConvexApiFooBarLibrary::WatchX_2(UConvexClient* Client, co
 	TMap<FString, FConvexValue> Args;
 	Args.Add(TEXT("a"), FConvexValue::String(A));
 	return Client->Subscribe(TEXT("foo_bar:x"), Args, OnUpdate);
+}
+
+void UConvexApiMessagesLibrary::List(UConvexClient* Client, const FString& Channel, FConvexResultDelegate OnResult)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex List: Client is null"));
+		return;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	Client->Query(TEXT("messages:list"), Args, OnResult);
+}
+
+UConvexSubscription* UConvexApiMessagesLibrary::WatchList(UConvexClient* Client, const FString& Channel, FConvexResultDelegate OnUpdate)
+{
+	if (Client == nullptr)
+	{
+		UE_LOG(LogConvexApiBP, Warning, TEXT("Convex WatchList: Client is null"));
+		return nullptr;
+	}
+	TMap<FString, FConvexValue> Args;
+	Args.Add(TEXT("channel"), FConvexValue::String(Channel));
+	return Client->Subscribe(TEXT("messages:list"), Args, OnUpdate);
 }
 
 void UConvexApiMessagesLibrary::ListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult)

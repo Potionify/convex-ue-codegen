@@ -28,6 +28,20 @@ public:
 };
 
 UCLASS()
+class UConvexApiCountersLibrary : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Convex API|counters", meta = (DisplayName = "Convex counters:get", ToolTip = "counters:get (Query)\nargs: object{ name: string }"))
+	static void Get(UConvexClient* Client, const FString& Name, FConvexResultDelegate OnResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Convex API|counters", meta = (DisplayName = "Convex Watch counters:get", ToolTip = "counters:get (Query) live subscription\nargs: object{ name: string }"))
+	static UConvexSubscription* WatchGet(UConvexClient* Client, const FString& Name, FConvexResultDelegate OnUpdate);
+
+};
+
+UCLASS()
 class UConvexApiFooBarLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
@@ -53,6 +67,12 @@ class UConvexApiMessagesLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex messages:list", ToolTip = "messages:list (Query)\nargs: object{ channel: string }"))
+	static void List(UConvexClient* Client, const FString& Channel, FConvexResultDelegate OnResult);
+
+	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex Watch messages:list", ToolTip = "messages:list (Query) live subscription\nargs: object{ channel: string }"))
+	static UConvexSubscription* WatchList(UConvexClient* Client, const FString& Channel, FConvexResultDelegate OnUpdate);
+
 	UFUNCTION(BlueprintCallable, Category = "Convex API|messages", meta = (DisplayName = "Convex messages:listBad", ToolTip = "messages:listBad (Query)\nargs: object{ channel: string, paginationOpts: object{ numItems: number } }"))
 	static void ListBad(UConvexClient* Client, const FString& Channel, const FConvexValue& PaginationOpts, FConvexResultDelegate OnResult);
 
