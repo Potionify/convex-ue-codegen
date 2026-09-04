@@ -378,16 +378,16 @@ namespace ConvexApi::Admin::Tools
 	/// returns: any
 	void Reset(UConvexClient Client, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Client.Mutation("admin/tools:reset", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		Client.Mutation("admin/tools:reset", _Args, OnResult);
 	}
 
 	/// All arguments, including the optional ones.
 	void Reset(UConvexClient Client, bool Force, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("force", Convex::MakeConvexBool(Force));
-		Client.Mutation("admin/tools:reset", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("force", Convex::MakeConvexBool(Force));
+		Client.Mutation("admin/tools:reset", _Args, OnResult);
 	}
 }
 
@@ -398,26 +398,29 @@ namespace ConvexApi::Counters
 	/// returns: number
 	void Get(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("name", Convex::MakeConvexString(Name));
-		UConvexApiCountersGetAdapter Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));
-		Adapter.Typed = OnResult;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		Client.Query("counters:get", Args, Handler);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("name", Convex::MakeConvexString(Name));
+		UConvexApiCountersGetAdapter _Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));
+		_Adapter.Typed = OnResult;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		Client.Query("counters:get", _Args, _Handler);
 	}
 
 	UConvexSubscription WatchGet(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("name", Convex::MakeConvexString(Name));
-		UConvexApiCountersGetAdapter Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		UConvexSubscription Subscription = Client.Subscribe("counters:get", Args, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("name", Convex::MakeConvexString(Name));
+		UConvexApiCountersGetAdapter _Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		UConvexSubscription _Subscription = Client.Subscribe("counters:get", _Args, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 }
 
@@ -428,16 +431,16 @@ namespace ConvexApi::FooBar
 	/// returns: any
 	void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("a", Convex::MakeConvexString(A));
-		Client.Query("fooBar:x", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("a", Convex::MakeConvexString(A));
+		Client.Query("fooBar:x", _Args, OnResult);
 	}
 
 	UConvexSubscription WatchX(UConvexClient Client, FString A, FConvexResultDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("a", Convex::MakeConvexString(A));
-		return Client.Subscribe("fooBar:x", Args, OnUpdate);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("a", Convex::MakeConvexString(A));
+		return Client.Subscribe("fooBar:x", _Args, OnUpdate);
 	}
 
 	/// foo_bar.js:x (Query)
@@ -445,16 +448,16 @@ namespace ConvexApi::FooBar
 	/// returns: any
 	void X_2(UConvexClient Client, FString A, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("a", Convex::MakeConvexString(A));
-		Client.Query("foo_bar:x", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("a", Convex::MakeConvexString(A));
+		Client.Query("foo_bar:x", _Args, OnResult);
 	}
 
 	UConvexSubscription WatchX_2(UConvexClient Client, FString A, FConvexResultDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("a", Convex::MakeConvexString(A));
-		return Client.Subscribe("foo_bar:x", Args, OnUpdate);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("a", Convex::MakeConvexString(A));
+		return Client.Subscribe("foo_bar:x", _Args, OnUpdate);
 	}
 }
 
@@ -465,26 +468,29 @@ namespace ConvexApi::Messages
 	/// returns: array<object{ _creationTime: number, _id: id<messages>, author: string, body: string, channel: string, edited?: boolean }>
 	void List(UConvexClient Client, FString Channel, FConvexApiMessagesListDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		UConvexApiMessagesListAdapter Adapter = Cast<UConvexApiMessagesListAdapter>(NewObject(Client, UConvexApiMessagesListAdapter));
-		Adapter.Typed = OnResult;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		Client.Query("messages:list", Args, Handler);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		UConvexApiMessagesListAdapter _Adapter = Cast<UConvexApiMessagesListAdapter>(NewObject(Client, UConvexApiMessagesListAdapter));
+		_Adapter.Typed = OnResult;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		Client.Query("messages:list", _Args, _Handler);
 	}
 
 	UConvexSubscription WatchList(UConvexClient Client, FString Channel, FConvexApiMessagesListDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		UConvexApiMessagesListAdapter Adapter = Cast<UConvexApiMessagesListAdapter>(NewObject(Client, UConvexApiMessagesListAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		UConvexSubscription Subscription = Client.Subscribe("messages:list", Args, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		UConvexApiMessagesListAdapter _Adapter = Cast<UConvexApiMessagesListAdapter>(NewObject(Client, UConvexApiMessagesListAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		UConvexSubscription _Subscription = Client.Subscribe("messages:list", _Args, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 
 	/// messages.js:listBad (Query)
@@ -492,18 +498,18 @@ namespace ConvexApi::Messages
 	/// returns: any
 	void ListBad(UConvexClient Client, FString Channel, FConvexApiMessagesListBadPaginationOpts PaginationOpts, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
-		Client.Query("messages:listBad", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		_Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
+		Client.Query("messages:listBad", _Args, OnResult);
 	}
 
 	UConvexSubscription WatchListBad(UConvexClient Client, FString Channel, FConvexApiMessagesListBadPaginationOpts PaginationOpts, FConvexResultDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
-		return Client.Subscribe("messages:listBad", Args, OnUpdate);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		_Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
+		return Client.Subscribe("messages:listBad", _Args, OnUpdate);
 	}
 
 	/// messages.js:listPaginated (Query)
@@ -511,43 +517,49 @@ namespace ConvexApi::Messages
 	/// returns: object{ continueCursor: string, isDone: boolean, page: array<object{ _creationTime: number, _id: id<messages>, author: string, body: string, channel: string, edited?: boolean }> }
 	void ListPaginated(UConvexClient Client, FString Channel, FConvexApiMessagesListPaginatedPaginationOpts PaginationOpts, FConvexApiMessagesListPaginatedDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
-		UConvexApiMessagesListPaginatedAdapter Adapter = Cast<UConvexApiMessagesListPaginatedAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedAdapter));
-		Adapter.Typed = OnResult;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		Client.Query("messages:listPaginated", Args, Handler);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		_Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
+		UConvexApiMessagesListPaginatedAdapter _Adapter = Cast<UConvexApiMessagesListPaginatedAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedAdapter));
+		_Adapter.Typed = OnResult;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		Client.Query("messages:listPaginated", _Args, _Handler);
 	}
 
 	UConvexSubscription WatchListPaginated(UConvexClient Client, FString Channel, FConvexApiMessagesListPaginatedPaginationOpts PaginationOpts, FConvexApiMessagesListPaginatedDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
-		UConvexApiMessagesListPaginatedAdapter Adapter = Cast<UConvexApiMessagesListPaginatedAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		UConvexSubscription Subscription = Client.Subscribe("messages:listPaginated", Args, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		_Args.Add("paginationOpts", ConvexApi::Types::Encode(PaginationOpts));
+		UConvexApiMessagesListPaginatedAdapter _Adapter = Cast<UConvexApiMessagesListPaginatedAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		UConvexSubscription _Subscription = Client.Subscribe("messages:listPaginated", _Args, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 
 	/// Subscribes messages:listPaginated as a growing live list (the usePaginatedQuery
 	/// pattern); paginationOpts is injected by the client.
 	UConvexPaginatedSubscription WatchListPaginatedPaginated(UConvexClient Client, FString Channel, int InitialNumItems, FConvexApiMessagesListPaginatedPageDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("channel", Convex::MakeConvexString(Channel));
-		UConvexApiMessagesListPaginatedPageAdapter Adapter = Cast<UConvexApiMessagesListPaginatedPageAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedPageAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexPaginatedSnapshotDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnSnapshot");
-		UConvexPaginatedSubscription Subscription = Client.SubscribePaginated("messages:listPaginated", Args, InitialNumItems, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("channel", Convex::MakeConvexString(Channel));
+		UConvexApiMessagesListPaginatedPageAdapter _Adapter = Cast<UConvexApiMessagesListPaginatedPageAdapter>(NewObject(Client, UConvexApiMessagesListPaginatedPageAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexPaginatedSnapshotDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnSnapshot");
+		UConvexPaginatedSubscription _Subscription = Client.SubscribePaginated("messages:listPaginated", _Args, InitialNumItems, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 }
 
@@ -566,270 +578,276 @@ namespace ConvexApi::Sink
 	/// returns: object{ ok: boolean }
 	void KitchenSink(UConvexClient Client, FConvexValue AnyField, bool B, int64 Big, TArray<uint8> By, TArray<int64> Counts, FString DocId, float F, TArray<bool> Flags, int64 I, TArray<FConvexApiSinkKitchenSinkItemsElement> Items, bool LitBool, float LitNum, FString LitStr, float N, FConvexValue Nul, TArray<float> Nums, FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni, FConvexApiSinkKitchenSinkDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("anyField", AnyField);
-		Args.Add("b", Convex::MakeConvexBool(B));
-		Args.Add("big", Convex::MakeConvexInt(Big));
-		Args.Add("by", Convex::MakeConvexBytes(By));
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("anyField", AnyField);
+		_Args.Add("b", Convex::MakeConvexBool(B));
+		_Args.Add("big", Convex::MakeConvexInt(Big));
+		_Args.Add("by", Convex::MakeConvexBytes(By));
 		{
 			TArray<FConvexValue> _CountsItems;
 			for (const int64& _Item : Counts)
 			{
 				_CountsItems.Add(Convex::MakeConvexInt(_Item));
 			}
-			Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
+			_Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
 		}
-		Args.Add("docId", Convex::MakeConvexString(DocId));
-		Args.Add("f", Convex::MakeConvexFloat(F));
+		_Args.Add("docId", Convex::MakeConvexString(DocId));
+		_Args.Add("f", Convex::MakeConvexFloat(F));
 		{
 			TArray<FConvexValue> _FlagsItems;
 			for (const bool& _Item : Flags)
 			{
 				_FlagsItems.Add(Convex::MakeConvexBool(_Item));
 			}
-			Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
+			_Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
 		}
-		Args.Add("i", Convex::MakeConvexInt(I));
+		_Args.Add("i", Convex::MakeConvexInt(I));
 		{
 			TArray<FConvexValue> _ItemsItems;
 			for (const FConvexApiSinkKitchenSinkItemsElement& _Item : Items)
 			{
 				_ItemsItems.Add(ConvexApi::Types::Encode(_Item));
 			}
-			Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
+			_Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
 		}
-		Args.Add("litBool", Convex::MakeConvexBool(LitBool));
-		Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
-		Args.Add("litStr", Convex::MakeConvexString(LitStr));
-		Args.Add("n", Convex::MakeConvexFloat(N));
-		Args.Add("nul", Nul);
+		_Args.Add("litBool", Convex::MakeConvexBool(LitBool));
+		_Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
+		_Args.Add("litStr", Convex::MakeConvexString(LitStr));
+		_Args.Add("n", Convex::MakeConvexFloat(N));
+		_Args.Add("nul", Nul);
 		{
 			TArray<FConvexValue> _NumsItems;
 			for (const float& _Item : Nums)
 			{
 				_NumsItems.Add(Convex::MakeConvexFloat(_Item));
 			}
-			Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
+			_Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
 		}
-		Args.Add("rec", Rec);
-		Args.Add("s", Convex::MakeConvexString(S));
+		_Args.Add("rec", Rec);
+		_Args.Add("s", Convex::MakeConvexString(S));
 		{
 			TArray<FConvexValue> _TagsItems;
 			for (const FString& _Item : Tags)
 			{
 				_TagsItems.Add(Convex::MakeConvexString(_Item));
 			}
-			Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
+			_Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
 		}
-		Args.Add("uni", Uni);
-		UConvexApiSinkKitchenSinkAdapter Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
-		Adapter.Typed = OnResult;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		Client.Query("sink:kitchenSink", Args, Handler);
+		_Args.Add("uni", Uni);
+		UConvexApiSinkKitchenSinkAdapter _Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
+		_Adapter.Typed = OnResult;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		Client.Query("sink:kitchenSink", _Args, _Handler);
 	}
 
 	/// All arguments, including the optional ones.
 	void KitchenSink(UConvexClient Client, FConvexValue AnyField, bool B, int64 Big, TArray<uint8> By, TArray<int64> Counts, FString DocId, float F, TArray<bool> Flags, int64 I, TArray<FConvexApiSinkKitchenSinkItemsElement> Items, bool LitBool, float LitNum, FString LitStr, float N, FConvexValue Nul, TArray<float> Nums, FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni, FConvexApiSinkKitchenSinkNested Nested, FConvexApiSinkKitchenSinkDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("anyField", AnyField);
-		Args.Add("b", Convex::MakeConvexBool(B));
-		Args.Add("big", Convex::MakeConvexInt(Big));
-		Args.Add("by", Convex::MakeConvexBytes(By));
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("anyField", AnyField);
+		_Args.Add("b", Convex::MakeConvexBool(B));
+		_Args.Add("big", Convex::MakeConvexInt(Big));
+		_Args.Add("by", Convex::MakeConvexBytes(By));
 		{
 			TArray<FConvexValue> _CountsItems;
 			for (const int64& _Item : Counts)
 			{
 				_CountsItems.Add(Convex::MakeConvexInt(_Item));
 			}
-			Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
+			_Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
 		}
-		Args.Add("docId", Convex::MakeConvexString(DocId));
-		Args.Add("f", Convex::MakeConvexFloat(F));
+		_Args.Add("docId", Convex::MakeConvexString(DocId));
+		_Args.Add("f", Convex::MakeConvexFloat(F));
 		{
 			TArray<FConvexValue> _FlagsItems;
 			for (const bool& _Item : Flags)
 			{
 				_FlagsItems.Add(Convex::MakeConvexBool(_Item));
 			}
-			Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
+			_Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
 		}
-		Args.Add("i", Convex::MakeConvexInt(I));
+		_Args.Add("i", Convex::MakeConvexInt(I));
 		{
 			TArray<FConvexValue> _ItemsItems;
 			for (const FConvexApiSinkKitchenSinkItemsElement& _Item : Items)
 			{
 				_ItemsItems.Add(ConvexApi::Types::Encode(_Item));
 			}
-			Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
+			_Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
 		}
-		Args.Add("litBool", Convex::MakeConvexBool(LitBool));
-		Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
-		Args.Add("litStr", Convex::MakeConvexString(LitStr));
-		Args.Add("n", Convex::MakeConvexFloat(N));
-		Args.Add("nul", Nul);
+		_Args.Add("litBool", Convex::MakeConvexBool(LitBool));
+		_Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
+		_Args.Add("litStr", Convex::MakeConvexString(LitStr));
+		_Args.Add("n", Convex::MakeConvexFloat(N));
+		_Args.Add("nul", Nul);
 		{
 			TArray<FConvexValue> _NumsItems;
 			for (const float& _Item : Nums)
 			{
 				_NumsItems.Add(Convex::MakeConvexFloat(_Item));
 			}
-			Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
+			_Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
 		}
-		Args.Add("rec", Rec);
-		Args.Add("s", Convex::MakeConvexString(S));
+		_Args.Add("rec", Rec);
+		_Args.Add("s", Convex::MakeConvexString(S));
 		{
 			TArray<FConvexValue> _TagsItems;
 			for (const FString& _Item : Tags)
 			{
 				_TagsItems.Add(Convex::MakeConvexString(_Item));
 			}
-			Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
+			_Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
 		}
-		Args.Add("uni", Uni);
-		Args.Add("nested", ConvexApi::Types::Encode(Nested));
-		UConvexApiSinkKitchenSinkAdapter Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
-		Adapter.Typed = OnResult;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		Client.Query("sink:kitchenSink", Args, Handler);
+		_Args.Add("uni", Uni);
+		_Args.Add("nested", ConvexApi::Types::Encode(Nested));
+		UConvexApiSinkKitchenSinkAdapter _Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
+		_Adapter.Typed = OnResult;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		Client.Query("sink:kitchenSink", _Args, _Handler);
 	}
 
 	UConvexSubscription WatchKitchenSink(UConvexClient Client, FConvexValue AnyField, bool B, int64 Big, TArray<uint8> By, TArray<int64> Counts, FString DocId, float F, TArray<bool> Flags, int64 I, TArray<FConvexApiSinkKitchenSinkItemsElement> Items, bool LitBool, float LitNum, FString LitStr, float N, FConvexValue Nul, TArray<float> Nums, FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni, FConvexApiSinkKitchenSinkDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("anyField", AnyField);
-		Args.Add("b", Convex::MakeConvexBool(B));
-		Args.Add("big", Convex::MakeConvexInt(Big));
-		Args.Add("by", Convex::MakeConvexBytes(By));
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("anyField", AnyField);
+		_Args.Add("b", Convex::MakeConvexBool(B));
+		_Args.Add("big", Convex::MakeConvexInt(Big));
+		_Args.Add("by", Convex::MakeConvexBytes(By));
 		{
 			TArray<FConvexValue> _CountsItems;
 			for (const int64& _Item : Counts)
 			{
 				_CountsItems.Add(Convex::MakeConvexInt(_Item));
 			}
-			Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
+			_Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
 		}
-		Args.Add("docId", Convex::MakeConvexString(DocId));
-		Args.Add("f", Convex::MakeConvexFloat(F));
+		_Args.Add("docId", Convex::MakeConvexString(DocId));
+		_Args.Add("f", Convex::MakeConvexFloat(F));
 		{
 			TArray<FConvexValue> _FlagsItems;
 			for (const bool& _Item : Flags)
 			{
 				_FlagsItems.Add(Convex::MakeConvexBool(_Item));
 			}
-			Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
+			_Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
 		}
-		Args.Add("i", Convex::MakeConvexInt(I));
+		_Args.Add("i", Convex::MakeConvexInt(I));
 		{
 			TArray<FConvexValue> _ItemsItems;
 			for (const FConvexApiSinkKitchenSinkItemsElement& _Item : Items)
 			{
 				_ItemsItems.Add(ConvexApi::Types::Encode(_Item));
 			}
-			Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
+			_Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
 		}
-		Args.Add("litBool", Convex::MakeConvexBool(LitBool));
-		Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
-		Args.Add("litStr", Convex::MakeConvexString(LitStr));
-		Args.Add("n", Convex::MakeConvexFloat(N));
-		Args.Add("nul", Nul);
+		_Args.Add("litBool", Convex::MakeConvexBool(LitBool));
+		_Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
+		_Args.Add("litStr", Convex::MakeConvexString(LitStr));
+		_Args.Add("n", Convex::MakeConvexFloat(N));
+		_Args.Add("nul", Nul);
 		{
 			TArray<FConvexValue> _NumsItems;
 			for (const float& _Item : Nums)
 			{
 				_NumsItems.Add(Convex::MakeConvexFloat(_Item));
 			}
-			Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
+			_Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
 		}
-		Args.Add("rec", Rec);
-		Args.Add("s", Convex::MakeConvexString(S));
+		_Args.Add("rec", Rec);
+		_Args.Add("s", Convex::MakeConvexString(S));
 		{
 			TArray<FConvexValue> _TagsItems;
 			for (const FString& _Item : Tags)
 			{
 				_TagsItems.Add(Convex::MakeConvexString(_Item));
 			}
-			Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
+			_Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
 		}
-		Args.Add("uni", Uni);
-		UConvexApiSinkKitchenSinkAdapter Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		UConvexSubscription Subscription = Client.Subscribe("sink:kitchenSink", Args, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		_Args.Add("uni", Uni);
+		UConvexApiSinkKitchenSinkAdapter _Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		UConvexSubscription _Subscription = Client.Subscribe("sink:kitchenSink", _Args, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 
 	/// All arguments, including the optional ones.
 	UConvexSubscription WatchKitchenSink(UConvexClient Client, FConvexValue AnyField, bool B, int64 Big, TArray<uint8> By, TArray<int64> Counts, FString DocId, float F, TArray<bool> Flags, int64 I, TArray<FConvexApiSinkKitchenSinkItemsElement> Items, bool LitBool, float LitNum, FString LitStr, float N, FConvexValue Nul, TArray<float> Nums, FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni, FConvexApiSinkKitchenSinkNested Nested, FConvexApiSinkKitchenSinkDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("anyField", AnyField);
-		Args.Add("b", Convex::MakeConvexBool(B));
-		Args.Add("big", Convex::MakeConvexInt(Big));
-		Args.Add("by", Convex::MakeConvexBytes(By));
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("anyField", AnyField);
+		_Args.Add("b", Convex::MakeConvexBool(B));
+		_Args.Add("big", Convex::MakeConvexInt(Big));
+		_Args.Add("by", Convex::MakeConvexBytes(By));
 		{
 			TArray<FConvexValue> _CountsItems;
 			for (const int64& _Item : Counts)
 			{
 				_CountsItems.Add(Convex::MakeConvexInt(_Item));
 			}
-			Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
+			_Args.Add("counts", Convex::MakeConvexArray(_CountsItems));
 		}
-		Args.Add("docId", Convex::MakeConvexString(DocId));
-		Args.Add("f", Convex::MakeConvexFloat(F));
+		_Args.Add("docId", Convex::MakeConvexString(DocId));
+		_Args.Add("f", Convex::MakeConvexFloat(F));
 		{
 			TArray<FConvexValue> _FlagsItems;
 			for (const bool& _Item : Flags)
 			{
 				_FlagsItems.Add(Convex::MakeConvexBool(_Item));
 			}
-			Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
+			_Args.Add("flags", Convex::MakeConvexArray(_FlagsItems));
 		}
-		Args.Add("i", Convex::MakeConvexInt(I));
+		_Args.Add("i", Convex::MakeConvexInt(I));
 		{
 			TArray<FConvexValue> _ItemsItems;
 			for (const FConvexApiSinkKitchenSinkItemsElement& _Item : Items)
 			{
 				_ItemsItems.Add(ConvexApi::Types::Encode(_Item));
 			}
-			Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
+			_Args.Add("items", Convex::MakeConvexArray(_ItemsItems));
 		}
-		Args.Add("litBool", Convex::MakeConvexBool(LitBool));
-		Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
-		Args.Add("litStr", Convex::MakeConvexString(LitStr));
-		Args.Add("n", Convex::MakeConvexFloat(N));
-		Args.Add("nul", Nul);
+		_Args.Add("litBool", Convex::MakeConvexBool(LitBool));
+		_Args.Add("litNum", Convex::MakeConvexFloat(LitNum));
+		_Args.Add("litStr", Convex::MakeConvexString(LitStr));
+		_Args.Add("n", Convex::MakeConvexFloat(N));
+		_Args.Add("nul", Nul);
 		{
 			TArray<FConvexValue> _NumsItems;
 			for (const float& _Item : Nums)
 			{
 				_NumsItems.Add(Convex::MakeConvexFloat(_Item));
 			}
-			Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
+			_Args.Add("nums", Convex::MakeConvexArray(_NumsItems));
 		}
-		Args.Add("rec", Rec);
-		Args.Add("s", Convex::MakeConvexString(S));
+		_Args.Add("rec", Rec);
+		_Args.Add("s", Convex::MakeConvexString(S));
 		{
 			TArray<FConvexValue> _TagsItems;
 			for (const FString& _Item : Tags)
 			{
 				_TagsItems.Add(Convex::MakeConvexString(_Item));
 			}
-			Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
+			_Args.Add("tags", Convex::MakeConvexArray(_TagsItems));
 		}
-		Args.Add("uni", Uni);
-		Args.Add("nested", ConvexApi::Types::Encode(Nested));
-		UConvexApiSinkKitchenSinkAdapter Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
-		Adapter.Typed = OnUpdate;
-		FConvexResultDelegate Handler;
-		Handler.BindUFunction(Adapter, n"OnResult");
-		UConvexSubscription Subscription = Client.Subscribe("sink:kitchenSink", Args, Handler);
-		Subscription.AttachListener(Adapter);
-		return Subscription;
+		_Args.Add("uni", Uni);
+		_Args.Add("nested", ConvexApi::Types::Encode(Nested));
+		UConvexApiSinkKitchenSinkAdapter _Adapter = Cast<UConvexApiSinkKitchenSinkAdapter>(NewObject(Client, UConvexApiSinkKitchenSinkAdapter));
+		_Adapter.Typed = OnUpdate;
+		FConvexResultDelegate _Handler;
+		_Handler.BindUFunction(_Adapter, n"OnResult");
+		UConvexSubscription _Subscription = Client.Subscribe("sink:kitchenSink", _Args, _Handler);
+		if (_Subscription != nullptr)
+		{
+			_Subscription.AttachListener(_Adapter);
+		}
+		return _Subscription;
 	}
 
 	/// sink.js:noArgs (Query)
@@ -837,14 +855,14 @@ namespace ConvexApi::Sink
 	/// returns: any
 	void NoArgs(UConvexClient Client, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Client.Query("sink:noArgs", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		Client.Query("sink:noArgs", _Args, OnResult);
 	}
 
 	UConvexSubscription WatchNoArgs(UConvexClient Client, FConvexResultDelegate OnUpdate)
 	{
-		TMap<FString, FConvexValue> Args;
-		return Client.Subscribe("sink:noArgs", Args, OnUpdate);
+		TMap<FString, FConvexValue> _Args;
+		return Client.Subscribe("sink:noArgs", _Args, OnUpdate);
 	}
 
 	/// sink.js:runAction (Action)
@@ -852,18 +870,18 @@ namespace ConvexApi::Sink
 	/// returns: any
 	void RunAction(UConvexClient Client, FString UploadId, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("uploadId", Convex::MakeConvexString(UploadId));
-		Client.Action("sink:runAction", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("uploadId", Convex::MakeConvexString(UploadId));
+		Client.Action("sink:runAction", _Args, OnResult);
 	}
 
 	/// All arguments, including the optional ones.
 	void RunAction(UConvexClient Client, FString UploadId, float Count, FConvexResultDelegate OnResult)
 	{
-		TMap<FString, FConvexValue> Args;
-		Args.Add("uploadId", Convex::MakeConvexString(UploadId));
-		Args.Add("count", Convex::MakeConvexFloat(Count));
-		Client.Action("sink:runAction", Args, OnResult);
+		TMap<FString, FConvexValue> _Args;
+		_Args.Add("uploadId", Convex::MakeConvexString(UploadId));
+		_Args.Add("count", Convex::MakeConvexFloat(Count));
+		Client.Action("sink:runAction", _Args, OnResult);
 	}
 }
 

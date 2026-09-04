@@ -210,8 +210,8 @@ TEST(Emit, ScriptWrappersOptIn) {
     // for callbacks, and the ScriptCallable client methods.
     EXPECT_TRUE(contains(as, "void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)"));
     EXPECT_TRUE(contains(as, "UConvexSubscription WatchX(UConvexClient Client, FString A, FConvexResultDelegate OnUpdate)"));
-    EXPECT_TRUE(contains(as, "Client.Query(\"fooBar:x\", Args, OnResult);"));
-    EXPECT_TRUE(contains(as, "return Client.Subscribe(\"fooBar:x\", Args, OnUpdate);"));
+    EXPECT_TRUE(contains(as, "Client.Query(\"fooBar:x\", _Args, OnResult);"));
+    EXPECT_TRUE(contains(as, "return Client.Subscribe(\"fooBar:x\", _Args, OnUpdate);"));
     EXPECT_TRUE(contains(as, "Convex::MakeConvexString(A)"));
     EXPECT_FALSE(contains(as, "TOptional"));
     EXPECT_FALSE(contains(as, "double"));
@@ -221,7 +221,7 @@ TEST(Emit, ScriptWrappersOptIn) {
     // takes the typed page delegate and routes through an adapter.
     EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription WatchListPaginatedPaginated("));
     EXPECT_TRUE(contains(as, "int InitialNumItems, FConvexApiMessagesListPaginatedPageDelegate OnUpdate)"));
-    EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription Subscription = Client.SubscribePaginated(\"messages:listPaginated\", Args, InitialNumItems, Handler);"));
+    EXPECT_TRUE(contains(as, "UConvexPaginatedSubscription _Subscription = Client.SubscribePaginated(\"messages:listPaginated\", _Args, InitialNumItems, _Handler);"));
 }
 
 TEST(Emit, ScriptStructsDedupeByShape) {
@@ -285,13 +285,13 @@ TEST(Emit, ScriptTypedReturnsUseDelegateAndAdapter) {
     // client, which roots the adapter until the callback fires; a watch
     // attaches the adapter to the subscription instead.
     EXPECT_TRUE(contains(as, "void Get(UConvexClient Client, FString Name, FConvexApiCountersGetDelegate OnResult)"));
-    EXPECT_TRUE(contains(as, "UConvexApiCountersGetAdapter Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));"));
-    EXPECT_TRUE(contains(as, "Adapter.Typed = OnResult;\n\t\tFConvexResultDelegate Handler;\n\t\tHandler.BindUFunction(Adapter, n\"OnResult\");\n\t\tClient.Query(\"counters:get\", Args, Handler);"));
-    EXPECT_TRUE(contains(as, "UConvexSubscription Subscription = Client.Subscribe(\"counters:get\", Args, Handler);\n\t\tSubscription.AttachListener(Adapter);\n\t\treturn Subscription;"));
+    EXPECT_TRUE(contains(as, "UConvexApiCountersGetAdapter _Adapter = Cast<UConvexApiCountersGetAdapter>(NewObject(Client, UConvexApiCountersGetAdapter));"));
+    EXPECT_TRUE(contains(as, "_Adapter.Typed = OnResult;\n\t\tFConvexResultDelegate _Handler;\n\t\t_Handler.BindUFunction(_Adapter, n\"OnResult\");\n\t\tClient.Query(\"counters:get\", _Args, _Handler);"));
+    EXPECT_TRUE(contains(as, "UConvexSubscription _Subscription = Client.Subscribe(\"counters:get\", _Args, _Handler);\n\t\tif (_Subscription != nullptr)\n\t\t{\n\t\t\t_Subscription.AttachListener(_Adapter);\n\t\t}\n\t\treturn _Subscription;"));
     // Paginated page adapter decodes the snapshot items.
     EXPECT_TRUE(contains(as, "delegate void FConvexApiMessagesListPaginatedPageDelegate(TArray<FConvexApiMessagesListElement> Results, FConvexPaginatedSnapshot Snapshot);"));
     EXPECT_TRUE(contains(as, "void OnSnapshot(FConvexPaginatedSnapshot Snapshot)"));
-    EXPECT_TRUE(contains(as, "Handler.BindUFunction(Adapter, n\"OnSnapshot\");"));
+    EXPECT_TRUE(contains(as, "_Handler.BindUFunction(_Adapter, n\"OnSnapshot\");"));
     // A function without a declared return keeps the raw delegate and no adapter.
     EXPECT_TRUE(contains(as, "void X(UConvexClient Client, FString A, FConvexResultDelegate OnResult)"));
     EXPECT_FALSE(contains(as, "UConvexApiFooBarXAdapter"));
@@ -305,7 +305,7 @@ TEST(Emit, ScriptObjectArgsAreStructs) {
     // encodes them. Unions, records, and any stay FConvexValue.
     EXPECT_TRUE(contains(as, "TArray<FConvexApiSinkKitchenSinkItemsElement> Items,"));
     EXPECT_TRUE(contains(as, "_ItemsItems.Add(ConvexApi::Types::Encode(_Item));"));
-    EXPECT_TRUE(contains(as, "Args.Add(\"nested\", ConvexApi::Types::Encode(Nested));"));
+    EXPECT_TRUE(contains(as, "_Args.Add(\"nested\", ConvexApi::Types::Encode(Nested));"));
     EXPECT_TRUE(contains(as, "FConvexValue Rec, FString S, TArray<FString> Tags, FConvexValue Uni,"));
     // An empty object and nested containers stay FConvexValue.
     EXPECT_FALSE(contains(as, "TArray<TArray"));
@@ -323,13 +323,74 @@ TEST(Emit, ScriptOptionalArgsBecomeOverloads) {
     ASSERT_NE(first, std::string::npos);
     ASSERT_NE(full, std::string::npos);
     EXPECT_LT(first, full);
-    EXPECT_TRUE(contains(as, "Args.Add(\"force\", Convex::MakeConvexBool(Force));"));
+    EXPECT_TRUE(contains(as, "_Args.Add(\"force\", Convex::MakeConvexBool(Force));"));
     // The required-only overload never references the optional parameter.
     const std::size_t first_end = as.find("\t}\n", first);
     EXPECT_EQ(as.substr(first, first_end - first).find("Force"), std::string::npos);
     // Optional scalars of every kind become plain parameters in the full overload.
     EXPECT_TRUE(contains(as, "float Count, FConvexResultDelegate OnResult)"));
     EXPECT_TRUE(contains(as, "FConvexApiSinkKitchenSinkNested Nested, FConvexApiSinkKitchenSinkDelegate OnResult)"));
+}
+
+TEST(Emit, ScriptNamesNeverShadowWrapperLocals) {
+    // Fields that PascalCase to a wrapper parameter or local get a suffix in
+    // every emitter; the script wrapper's own locals start with an underscore.
+    const std::string spec = R"([
+      {"identifier": "edge.js:get", "functionType": "Query", "visibility": {"kind": "public"},
+       "args": {"type": "object", "value": {
+         "client": {"fieldType": {"type": "string"}, "optional": false},
+         "adapter": {"fieldType": {"type": "string"}, "optional": false},
+         "handler": {"fieldType": {"type": "string"}, "optional": false},
+         "args": {"fieldType": {"type": "string"}, "optional": false},
+         "onResult": {"fieldType": {"type": "string"}, "optional": false}}},
+       "returns": {"type": "number"}}
+    ])";
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    auto files = convex_codegen::emit_all(spec, opts);
+    const std::string& as = files.at("ConvexApi.as");
+    EXPECT_TRUE(contains(as, "void Get(UConvexClient Client, FString Adapter, FString Args_2, FString Client_2, FString Handler, FString OnResult_2, FConvexApiEdgeGetDelegate OnResult)"));
+    EXPECT_TRUE(contains(as, "UConvexApiEdgeGetAdapter _Adapter = Cast<UConvexApiEdgeGetAdapter>(NewObject(Client, UConvexApiEdgeGetAdapter));"));
+    EXPECT_TRUE(contains(as, "_Args.Add(\"client\", Convex::MakeConvexString(Client_2));"));
+    EXPECT_TRUE(contains(files.at("ConvexApi.h"), "const FString& Client_2"));
+}
+
+TEST(Emit, ScriptStructMembersAreCaseInsensitive) {
+    // Reflected struct members are FNames, so `bHasFoo` and a PascalCased
+    // `BHasFoo` would collide; the companion gets a suffix.
+    const std::string spec = R"([
+      {"identifier": "edge.js:shape", "functionType": "Query", "visibility": {"kind": "public"},
+       "args": {"type": "object", "value": {}},
+       "returns": {"type": "object", "value": {
+         "bHasFoo": {"fieldType": {"type": "boolean"}, "optional": false},
+         "foo": {"fieldType": {"type": "string"}, "optional": true}}}}
+    ])";
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = convex_codegen::emit_all(spec, opts).at("ConvexApi.as");
+    EXPECT_TRUE(contains(as, "\tbool BHasFoo = false;\n\tFString Foo;\n\tbool bHasFoo_2 = false;"));
+}
+
+TEST(Emit, ScriptPageOfBytesStaysUntyped) {
+    // A page of bytes would need TArray<TArray<uint8>>, which the fork
+    // rejects, so the paginated wrapper keeps the raw snapshot delegate.
+    const std::string spec = R"([
+      {"identifier": "edge.js:blobs", "functionType": "Query", "visibility": {"kind": "public"},
+       "args": {"type": "object", "value": {
+         "paginationOpts": {"fieldType": {"type": "object", "value": {
+           "numItems": {"fieldType": {"type": "number"}, "optional": false},
+           "cursor": {"fieldType": {"type": "union", "value": [{"type": "string"}, {"type": "null"}]}, "optional": false}}}, "optional": false}}},
+       "returns": {"type": "object", "value": {
+         "page": {"fieldType": {"type": "array", "value": {"type": "bytes"}}, "optional": false},
+         "isDone": {"fieldType": {"type": "boolean"}, "optional": false},
+         "continueCursor": {"fieldType": {"type": "string"}, "optional": false}}}}
+    ])";
+    convex_codegen::emit_options opts;
+    opts.emit_script = true;
+    const std::string as = convex_codegen::emit_all(spec, opts).at("ConvexApi.as");
+    EXPECT_FALSE(contains(as, "TArray<TArray"));
+    EXPECT_TRUE(contains(as, "int InitialNumItems, FConvexPaginatedSnapshotDelegate OnUpdate)"));
+    EXPECT_TRUE(contains(as, "\tTArray<FConvexValue> Page;\n"));
 }
 
 TEST(Emit, IncludeInternalEmitsSecret) {

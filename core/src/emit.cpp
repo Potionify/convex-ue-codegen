@@ -6,6 +6,7 @@
 #include <convex_codegen/validator.h>
 
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <optional>
 #include <set>
@@ -15,6 +16,39 @@
 namespace convex_codegen {
 
 namespace {
+
+// --------------------------------------------------------------------------
+// Name deduplication (per namespace / per class)
+// --------------------------------------------------------------------------
+
+class name_pool {
+public:
+    /// `case_insensitive` reserves names by their lowercase form, for
+    /// identifiers that end up as FNames (reflected struct members).
+    explicit name_pool(bool case_insensitive = false) : ci_(case_insensitive) {}
+
+    /// Reserve a name without returning it, so later takes avoid it.
+    void reserve(const std::string& name) { used_.insert(key(name)); }
+
+    std::string take(const std::string& desired) {
+        if (used_.insert(key(desired)).second) return desired;
+        for (int n = 2;; ++n) {
+            std::string candidate = desired + "_" + std::to_string(n);
+            if (used_.insert(key(candidate)).second) return candidate;
+        }
+    }
+
+private:
+    std::string key(const std::string& name) const {
+        if (!ci_) return name;
+        std::string k = name;
+        for (char& c : k) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return k;
+    }
+
+    bool ci_;
+    std::set<std::string> used_;
+};
 
 // --------------------------------------------------------------------------
 // Argument planning
@@ -43,10 +77,16 @@ arg_plan plan_args(const function_spec& spec) {
     }
     std::vector<planned_arg> required;
     std::vector<planned_arg> optional;
+    // Every wrapper form has these parameters or locals of its own; a field
+    // that PascalCases to one of them gets a numeric suffix instead.
+    name_pool params;
+    for (const char* reserved : {"Client", "Args", "OnResult", "OnUpdate", "OnDone", "InitialNumItems"}) {
+        params.reserve(reserved);
+    }
     for (const validator_field& field : spec.args->fields) {
         planned_arg a;
         a.field_name = field.name;
-        a.param_name = pascal_case(field.name);
+        a.param_name = params.take(pascal_case(field.name));
         a.type = map_type(field.type);
         a.validator = field.type;
         a.optional = field.optional;
@@ -63,24 +103,6 @@ arg_plan plan_args(const function_spec& spec) {
     plan.args.insert(plan.args.end(), optional.begin(), optional.end());
     return plan;
 }
-
-// --------------------------------------------------------------------------
-// Name deduplication (per namespace / per class)
-// --------------------------------------------------------------------------
-
-class name_pool {
-public:
-    std::string take(const std::string& desired) {
-        if (used_.insert(desired).second) return desired;
-        for (int n = 2;; ++n) {
-            std::string candidate = desired + "_" + std::to_string(n);
-            if (used_.insert(candidate).second) return candidate;
-        }
-    }
-
-private:
-    std::set<std::string> used_;
-};
 
 // --------------------------------------------------------------------------
 // Small text helpers
@@ -803,7 +825,7 @@ private:
         structs_[index].shape = shape;
 
         std::vector<script_struct_field> fields;
-        name_pool members;
+        name_pool members(/*case_insensitive=*/true);
         for (const validator_field& f : v.fields) {
             script_struct_field sf;
             sf.wire = f.name;
@@ -874,7 +896,7 @@ script_fn plan_script_fn(script_type_registry& reg, const std::string& prefix, c
     }
     if (r.paginated) {
         const script_ty item = reg.resolve(page_element(*r.spec), s.base, "Element");
-        if (!item.is_plain_value() && !item.is_array) {
+        if (!item.is_plain_value() && !item.is_array && item.b != script_ty::base::bytes) {
             s.page_item = item;
             s.page_delegate_name = reg.take_global("F" + s.base + "PageDelegate");
             s.page_adapter_name = reg.take_global("U" + s.base + "PageAdapter");
@@ -1070,11 +1092,11 @@ void emit_script_adapters(std::string& s, const std::string& prefix, const funct
 std::string script_args_build(const std::string& prefix, const arg_plan& plan,
                               const std::vector<script_ty>& types, bool include_optional) {
     std::string out;
-    out += "\t\tTMap<FString, FConvexValue> Args;\n";
+    out += "\t\tTMap<FString, FConvexValue> _Args;\n";
     for (std::size_t i = 0; i < plan.args.size(); ++i) {
         const planned_arg& a = plan.args[i];
         if (a.optional && !include_optional) continue;
-        out += script_encode_add(prefix, types[i], "Args", a.field_name, a.param_name,
+        out += script_encode_add(prefix, types[i], "_Args", a.field_name, a.param_name,
                                  a.param_name, "\t\t");
     }
     return out;
@@ -1164,18 +1186,20 @@ void script_function(std::string& s, const std::string& prefix, script_call mode
              ")\n\t{\n";
         if (!plan.passthrough) s += script_args_build(prefix, plan, types, include_optional);
 
+        // Locals start with an underscore: pascal_case never yields one, so
+        // no argument can shadow them.
         std::string handler = callback_name;
         if (!adapter.empty()) {
-            s += "\t\t" + adapter + " Adapter = Cast<" + adapter + ">(NewObject(Client, " +
+            s += "\t\t" + adapter + " _Adapter = Cast<" + adapter + ">(NewObject(Client, " +
                  adapter + "));\n";
-            s += "\t\tAdapter.Typed = " + callback_name + ";\n";
-            s += "\t\t" + client_delegate + " Handler;\n";
-            s += "\t\tHandler.BindUFunction(Adapter, n\"" + handler_fn + "\");\n";
-            handler = "Handler";
+            s += "\t\t_Adapter.Typed = " + callback_name + ";\n";
+            s += "\t\t" + client_delegate + " _Handler;\n";
+            s += "\t\t_Handler.BindUFunction(_Adapter, n\"" + handler_fn + "\");\n";
+            handler = "_Handler";
         }
 
         const std::string call_args =
-            "\"" + path + "\", Args" +
+            "\"" + path + "\", " + (plan.passthrough ? "Args" : "_Args") +
             (mode == script_call::paginated ? std::string(", InitialNumItems") : std::string()) +
             ", " + handler + ")";
         switch (mode) {
@@ -1188,9 +1212,13 @@ void script_function(std::string& s, const std::string& prefix, script_call mode
                 if (adapter.empty()) {
                     s += "\t\treturn Client." + std::string(method) + "(" + call_args + ";\n";
                 } else {
-                    s += "\t\t" + ret + " Subscription = Client." + method + "(" + call_args + ";\n";
-                    s += "\t\tSubscription.AttachListener(Adapter);\n";
-                    s += "\t\treturn Subscription;\n";
+                    // Subscribe returns null on an uninitialized or shut-down
+                    // client; hand that back rather than dereferencing it.
+                    s += "\t\t" + ret + " _Subscription = Client." + method + "(" + call_args + ";\n";
+                    s += "\t\tif (_Subscription != nullptr)\n\t\t{\n";
+                    s += "\t\t\t_Subscription.AttachListener(_Adapter);\n";
+                    s += "\t\t}\n";
+                    s += "\t\treturn _Subscription;\n";
                 }
                 break;
             }
