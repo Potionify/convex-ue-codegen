@@ -1,15 +1,17 @@
 # Cloudflare Workers deployment of the static web app: an assets-only worker
 # with no server code, so the deploy key never leaves the visitor's browser.
 #
-# Build first, then deploy:
-#   cd web && npm install && npm run build && cd ..
-#   npx wrangler deploy
+# `npx wrangler deploy` runs the build command below first, so it works the
+# same from a shell and from Cloudflare Workers Builds.
 #
 # The custom domain below is claimed on deploy. The potionify.com zone has to
 # be on the same Cloudflare account.
 
 name = "convex-ue-codegen"
 compatibility_date = "2025-01-01"
+
+[build]
+command = "npm ci --prefix web && npm run build --prefix web"
 
 routes = [
   { pattern = "ue-codegen.potionify.com", custom_domain = true }
